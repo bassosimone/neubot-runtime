@@ -92,7 +92,7 @@ def addrinfo_key(ainfo):
     ''' Map addrinfo to protocol family '''
     return COMPARE_AF[ainfo[0]]
 
-def listen(epnt, prefer_ipv6):
+def listen(epnt):
     ''' Listen to all sockets represented by epnt '''
 
     logging.debug('listen(): about to listen to: %s', str(epnt))
@@ -106,7 +106,7 @@ def listen(epnt, prefer_ipv6):
     # Allow to listen on a list of addresses
     if epnt[0] and ' ' in epnt[0]:
         for address in epnt[0].split():
-            result = listen((address.strip(), epnt[1]), prefer_ipv6)
+            result = listen((address.strip(), epnt[1]))
             sockets.extend(result)
         return sockets
 
@@ -125,7 +125,7 @@ def listen(epnt, prefer_ipv6):
     message[-1] = ']'
     logging.debug(''.join(message))
 
-    addrinfo.sort(key=addrinfo_key, reverse=prefer_ipv6)
+    addrinfo.sort(key=addrinfo_key, reverse=True)
 
     for ainfo in addrinfo:
         try:
@@ -133,6 +133,11 @@ def listen(epnt, prefer_ipv6):
 
             sock = socket.socket(ainfo[0], socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if ainfo[0] == socket.AF_INET6:
+                try:
+                    sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+                except AttributeError:
+                    pass
             sock.setblocking(False)
             sock.bind(ainfo[4])
             # Probably the backlog here is too big
