@@ -27,8 +27,6 @@
  enforce an ASCII-only policy on all the path names.
 '''
 
-import sys
-import os.path
 import re
 
 from . import utils_path
@@ -63,7 +61,3 @@ def ssi_replace(rootdir, filep):
     page = []
     ssi_split(rootdir, filep.read(), page, 0)
     return "".join(page)
-
-if __name__ == "__main__":
-    FILEP = open(sys.argv[1], "rb")
-    print ssi_replace(os.path.abspath("."), FILEP)

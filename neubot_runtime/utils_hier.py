@@ -148,27 +148,3 @@ DATABASEPATH = os.sep.join([LOCALSTATEDIR, 'database.sqlite3'])
 
 # Path to /etc/neubot/api
 APIFILEPATH = os.sep.join([SYSCONFDIR, 'api'])
-
-def main(args):
-    ''' Main function '''
-
-    if len(args) == 2:
-        sys.stdout.write('%s\n' % globals()[args[1]])
-        sys.exit(0)
-    elif len(args) > 2:
-        sys.exit('usage: neubot utils_hier [VARIABLE]')
-
-    sys.stdout.write('''\
-APIFILEPATH   : "%(APIFILEPATH)s"
-BASEDIR       : "%(BASEDIR)s"
-DATABASEPATH  : "%(DATABASEPATH)s"
-LOCALSTATEDIR : "%(LOCALSTATEDIR)s"
-OPENSSL       : "%(OPENSSL)s"
-ROOTDIR       : "%(ROOTDIR)s"
-SYSCONFDIR    : "%(SYSCONFDIR)s"
-VERDSIONDIR   : "%(VERSIONDIR)s"
-WWWDIR        : "%(WWWDIR)s"
-''' % globals())
-
-if __name__ == "__main__":
-    main(sys.argv)

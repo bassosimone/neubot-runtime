@@ -28,10 +28,6 @@
 import collections
 import logging
 import os
-import sys
-
-if __name__ == "__main__":
-    sys.path.insert(0, ".")
 
 from .third_party import six
 
@@ -176,16 +172,3 @@ def normalize(string):
 def join(left, right):
     ''' Join two paths '''
     return os.sep.join([left, right])
-
-def main(args):
-    """ Main function """
-    logging.basicConfig(level=logging.DEBUG, format="%(message)s")
-    if len(args) < 3:
-        sys.exit("usage: python neubot/utils_path.py prefix path [...]")
-    if len(args) == 3:
-        append(args[1], args[2], True)
-    else:
-        depth_visit(args[1], args[2:], lambda *args: None)
-
-if __name__ == "__main__":
-    main(sys.argv)

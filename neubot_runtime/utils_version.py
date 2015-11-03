@@ -42,9 +42,7 @@
   version number in a simple way.
 """
 
-import getopt
 import decimal
-import sys
 import re
 
 # Canonical representation
@@ -188,29 +186,3 @@ CANONICAL_VERSION = '0.4.17.0'
 NUMERIC_VERSION = to_numeric(CANONICAL_VERSION)
 PRODUCT = 'Neubot %s' % CANONICAL_VERSION
 HTTP_HEADER = 'Neubot/%s' % CANONICAL_VERSION
-
-def main(args):
-    ''' Main function '''
-    try:
-        options, arguments = getopt.getopt(args[1:], 'c')
-    except getopt.error:
-        sys.exit('usage: neubot utils_version [-c] [version...]')
-    canonical = 0
-    for opt in options:
-        if opt[0] == '-c':
-            canonical = 1
-
-    if not arguments:
-        if canonical:
-            arguments = [NUMERIC_VERSION]
-        else:
-            arguments = [CANONICAL_VERSION]
-
-    for argument in arguments:
-        if canonical:
-            sys.stdout.write('%s\n' % to_canonical(argument))
-        else:
-            sys.stdout.write('%s\n' % to_numeric(argument))
-
-if __name__ == '__main__':
-    main(sys.argv)

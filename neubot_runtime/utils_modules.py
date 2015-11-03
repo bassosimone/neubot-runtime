@@ -29,9 +29,6 @@ import logging
 import os
 import sys
 
-if __name__ == "__main__":
-    sys.path.insert(0, ".")
-
 from . import utils_hier
 
 def modprobe(filt, context, message):
@@ -93,7 +90,3 @@ def modprobe(filt, context, message):
             continue
 
         logging.debug("utils_modules: load '%s' context '%s'", name, context)
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG, format="%(message)s")
-    modprobe(None, "server", {})
