@@ -28,6 +28,7 @@ import os
 import logging
 
 from .third_party.six import StringIO
+from .third_party.six import PY3
 from . import http_misc
 from . import utils
 from . import utils_net
@@ -117,7 +118,8 @@ class HttpMessage(object):
         vector.append("\r\n")
 
         string = "".join(vector)
-        string = utils.stringify(string)
+        if PY3:
+            string = string.encode("iso-8859-1")
         return StringIO(string)
 
     def serialize_body(self):
