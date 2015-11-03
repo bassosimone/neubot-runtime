@@ -26,15 +26,22 @@ import logging
 from .stream import MAXBUF
 from .stream import Stream
 
+from .http_states import IDLE
+from .http_states import BOUNDED
+from .http_states import UNBOUNDED
+from .http_states import CHUNK
+from .http_states import CHUNK_END
+from .http_states import FIRSTLINE
+from .http_states import HEADER
+from .http_states import CHUNK_LENGTH
+from .http_states import TRAILER
+from .http_states import ERROR
+
 # Accepted HTTP protocols
 PROTOCOLS = ("HTTP/1.0", "HTTP/1.1")
 
 # Maximum allowed line length
 MAXLINE = 1 << 15
-
-# Possible states of the receiver
-(IDLE, BOUNDED, UNBOUNDED, CHUNK, CHUNK_END, FIRSTLINE,
- HEADER, CHUNK_LENGTH, TRAILER, ERROR) = range(0, 10)
 
 # receiver state names
 STATES = ("IDLE", "BOUNDED", "UNBOUNDED", "CHUNK", "CHUNK_END", "FIRSTLINE",
