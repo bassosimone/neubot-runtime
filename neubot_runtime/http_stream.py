@@ -36,6 +36,8 @@ from .http_states import CHUNK_LENGTH
 from .http_states import TRAILER
 from .http_states import ERROR
 
+from .third_party import six
+
 # Accepted HTTP protocols
 PROTOCOLS = ("HTTP/1.0", "HTTP/1.1")
 
@@ -86,7 +88,7 @@ class HttpStream(Stream):
             vector = []
             vector.append(message.serialize_headers().read())
             body = message.serialize_body()
-            if not isinstance(body, basestring):
+            if hasattr(body, 'read'):
                 vector.append(body.read())
             else:
                 vector.append(body)
@@ -121,7 +123,7 @@ class HttpStream(Stream):
             # when we know the length we're looking for a piece
             if self.left > 0:
                 count = min(self.left, length)
-                piece = buffer(data, offset, count)
+                piece = six.buff(data, offset, count)
                 self.left -= count
                 offset += count
                 length -= count

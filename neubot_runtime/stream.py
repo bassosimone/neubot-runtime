@@ -22,7 +22,6 @@
 """ Stream abstraction """
 
 import collections
-import types
 import logging
 
 from .pollable import Pollable
@@ -31,6 +30,8 @@ from .pollable import WANT_READ
 from .pollable import WANT_WRITE
 from .pollable import CONNRST
 from .async_socket import AsyncSocket
+
+from .third_party import six
 
 from . import utils_net
 
@@ -186,7 +187,7 @@ class Stream(Pollable):
 
         while self.send_queue:
             octets = self.send_queue[0]
-            if isinstance(octets, basestring):
+            if not hasattr(octets, 'read'):
                 # remove the piece in any case
                 self.send_queue.popleft()
                 if octets:
@@ -199,7 +200,7 @@ class Stream(Pollable):
                 self.send_queue.popleft()
 
         if octets:
-            if type(octets) == types.UnicodeType:
+            if octets.__class__ == six.u("").__class__:
                 logging.warning("Received unicode input")
                 octets = octets.encode("utf-8")
 
@@ -242,7 +243,7 @@ class Stream(Pollable):
                 return
 
             if count < len(self.send_octets):
-                self.send_octets = buffer(self.send_octets, count)
+                self.send_octets = six.buff(self.send_octets, count)
                 self.poller.set_writable(self)
                 return
 

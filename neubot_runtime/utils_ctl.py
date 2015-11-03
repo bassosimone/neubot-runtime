@@ -25,11 +25,12 @@
 ''' Helpers to control Neubot daemon '''
 
 import errno
-import httplib
 import logging
 import socket
 import sys
 import time
+
+from .third_party.six import moves
 
 def is_running(address, port, verbose=0, quick=0):
 
@@ -49,7 +50,7 @@ def is_running(address, port, verbose=0, quick=0):
         running = False
 
         try:
-            connection = httplib.HTTPConnection(address, port)
+            connection = moves.http_client.HTTPConnection(address, port)
             connection.set_debuglevel(verbose)
             connection.request('GET', '/api/version')
             response = connection.getresponse()
@@ -100,7 +101,7 @@ def stop(address, port, verbose=0):
 
     try:
 
-        connection = httplib.HTTPConnection(address, port)
+        connection = moves.http_client.HTTPConnection(address, port)
         connection.set_debuglevel(verbose)
         connection.request('POST', '/api/exit')
 

@@ -21,13 +21,13 @@
 
 ''' An HTTP message '''
 
-import StringIO
 import email.utils
 import collections
 import socket
 import os
 import logging
 
+from .third_party.six import StringIO
 from . import http_misc
 from . import utils
 from . import utils_net
@@ -63,7 +63,7 @@ class HttpMessage(object):
         self.requestline = " ".join((method, uri, protocol))
 
         self.headers = collections.defaultdict(str)
-        self.body = StringIO.StringIO("")
+        self.body = StringIO("")
 
         self.family = socket.AF_UNSPEC
         self.response = None
@@ -118,7 +118,7 @@ class HttpMessage(object):
 
         string = "".join(vector)
         string = utils.stringify(string)
-        return StringIO.StringIO(string)
+        return StringIO(string)
 
     def serialize_body(self):
         ''' Serialize message body '''
@@ -139,14 +139,14 @@ class HttpMessage(object):
     def __setitem__(self, key, value):
         ''' Save an header '''
         key = key.lower()
-        if self.headers.has_key(key):
+        if key in self.headers:
             value = self.headers[key] + ", " + value
         self.headers[key] = value
 
     def __delitem__(self, key):
         ''' Delete an header '''
         key = key.lower()
-        if self.headers.has_key(key):
+        if key in self.headers:
             del self.headers[key]
 
     #
@@ -214,7 +214,7 @@ class HttpMessage(object):
 
         elif kwargs.get("body", None):
             self.body = kwargs.get("body", None)
-            if isinstance(self.body, basestring):
+            if not hasattr(self.body, 'tell'):
                 self.length = len(self.body)
             else:
                 utils.safe_seek(self.body, 0, os.SEEK_END)

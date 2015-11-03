@@ -21,7 +21,7 @@
 
 ''' An HTTP message '''
 
-import urlparse
+from .third_party.six import urlparse
 
 from .http_states import BOUNDED
 from .http_states import UNBOUNDED

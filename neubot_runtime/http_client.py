@@ -50,7 +50,7 @@ class HttpClient(StreamHandler):
             self.host_header = utils_net.format_epnt(endpoint)
         except (KeyboardInterrupt, SystemExit):
             raise
-        except Exception, why:
+        except Exception as why:
             self.connection_failed(None, why)
         else:
             self.connect(endpoint, count)

@@ -25,7 +25,7 @@ import collections
 
 from .http_stream import HttpStream
 from .http_stream import ERROR
-from .http_stream import nextstate
+from .http_misc import nextstate
 from .http_message import HttpMessage
 from . import utils
 
