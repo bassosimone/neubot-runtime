@@ -1,15 +1,7 @@
-# neubot/net/stream.py
-
 #
-# There are tons of pylint warnings in this file, disable
-# the less relevant ones for now.
-#
-# pylint: disable=C0111
-#
-
-#
-# Copyright (c) 2010-2012 Simone Basso <bassosimone@gmail.com>,
-#  NEXA Center for Internet & Society at Politecnico di Torino
+# Copyright (c) 2010-2012, 2015
+#     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN)
+#     and Simone Basso <bassosimone@gmail.com>.
 #
 # This file is part of Neubot <http://www.neubot.org/>.
 #
@@ -26,6 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Neubot.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+""" Stream abstraction """
 
 import collections
 import types
@@ -44,6 +38,8 @@ from . import utils_net
 MAXBUF = 1 << 18
 
 class Stream(Pollable):
+    """ Stream class """
+
     def __init__(self, poller):
         Pollable.__init__(self)
         self.poller = poller
@@ -78,6 +74,7 @@ class Stream(Pollable):
         return self.filenum
 
     def attach(self, parent, sock, conf):
+        """ Attach stream to parent, socket and conf """
 
         self.parent = parent
         self.conf = conf
@@ -94,23 +91,26 @@ class Stream(Pollable):
         self.connection_made()
 
     def connection_made(self):
-        pass
+        """ Called when the connection is made """
 
     def atclose(self, func):
+        """ Register function to be called at close """
         if func in self.atclosev:
             logging.warning("Duplicate atclose(): %s", func)
         self.atclosev.add(func)
 
     def unregister_atclose(self, func):
+        """ Unregister function called at close """
         if func in self.atclosev:
             self.atclosev.remove(func)
 
     # Close path
 
     def connection_lost(self, exception):
-        pass
+        """ Called when the connection is lost """
 
     def close(self):
+        """ Close this stream """
         self.close_pending = True
         if self.send_pending or self.close_complete:
             return
@@ -140,6 +140,7 @@ class Stream(Pollable):
     # Recv path
 
     def start_recv(self):
+        """ Start async recv operation """
         if (self.close_complete or self.close_pending
                 or self.recv_pending):
             return
@@ -175,11 +176,12 @@ class Stream(Pollable):
         raise RuntimeError("Unexpected status value")
 
     def recv_complete(self, octets):
-        pass
+        """ Called when recv is complete """
 
     # Send path
 
     def read_send_queue(self):
+        """ Reads send queue """
         octets = ""
 
         while self.send_queue:
@@ -204,6 +206,7 @@ class Stream(Pollable):
         return octets
 
     def start_send(self, octets):
+        """ Starts async send operation """
         if self.close_complete or self.close_pending:
             return
 
@@ -264,4 +267,4 @@ class Stream(Pollable):
         raise RuntimeError("Unexpected status value")
 
     def send_complete(self):
-        pass
+        """ Called when send is complete """

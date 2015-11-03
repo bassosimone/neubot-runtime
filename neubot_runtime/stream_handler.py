@@ -57,7 +57,7 @@ class StreamHandler(object):
     @staticmethod
     def connect(endpoint, count=1):
         """ Connect to the remote endpoint """
-        raise RuntimeError
+        raise NotImplementedError
 
     def connection_failed(self, connector, exception):
         """ Called when a connect attempt failed """

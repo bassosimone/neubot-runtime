@@ -50,7 +50,7 @@ class HttpServerStream(HttpStream):
     def __init__(self, poller):
         ''' Initialize '''
         HttpStream.__init__(self, poller)
-        self.response_rewriter = None
+        self.response_rewriter = lambda req, res: None
         self.request = None
 
     def got_request_line(self, method, uri, protocol):
@@ -93,8 +93,7 @@ class HttpServerStream(HttpStream):
     def send_response(self, request, response):
         ''' Send a response to the client '''
 
-        if self.response_rewriter:
-            self.response_rewriter(request, response)
+        self.response_rewriter(request, response)
 
         if request['connection'] == 'close' or request.protocol == 'HTTP/1.0':
             del response['connection']
@@ -107,8 +106,9 @@ class HttpServerStream(HttpStream):
 
         address = self.peername[0]
         now = time.gmtime()
-        timestring = "%02d/%s/%04d:%02d:%02d:%02d -0000" % (now.tm_mday,
-          MONTH[now.tm_mon], now.tm_year, now.tm_hour, now.tm_min, now.tm_sec)
+        timestring = "%02d/%s/%04d:%02d:%02d:%02d -0000" % (
+            now.tm_mday, MONTH[now.tm_mon], now.tm_year, now.tm_hour,
+            now.tm_min, now.tm_sec)
         requestline = request.requestline
         statuscode = response.code
 

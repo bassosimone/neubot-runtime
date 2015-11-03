@@ -1,10 +1,10 @@
-# neubot/utils_ctl.py
-
 #
 # Copyright (c) 2011 Marco Scopesi <marco.scopesi@gmail.com>,
-#  Politecnico di Torino
-# Copyright (c) 2011-2012 Simone Basso <bassosimone@gmail.com>,
-#  NEXA Center for Internet & Society at Politecnico di Torino
+#     Politecnico di Torino
+#
+# Copyright (c) 2011-2012, 2015
+#     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN)
+#     and Simone Basso <bassosimone@gmail.com>.
 #
 # This file is part of Neubot <http://www.neubot.org/>.
 #

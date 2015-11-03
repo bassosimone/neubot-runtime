@@ -1,5 +1,3 @@
-# neubot/utils_version.py
-
 #
 # Copyright (c) 2011-2012
 #     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN)
@@ -50,11 +48,11 @@ import sys
 import re
 
 # Canonical representation
-LEGACY_CANONICAL_REPR = "^([0-9]+)\.([0-9]+)(\.([0-9]+))?(-rc([0-9]+))?$"
-CANONICAL_REPR = "^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$"
+LEGACY_CANONICAL_REPR = r"^([0-9]+)\.([0-9]+)(\.([0-9]+))?(-rc([0-9]+))?$"
+CANONICAL_REPR = r"^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$"
 
 # Numeric representation
-NUMERIC_REPR = "^([0-9]+)\.([0-9]{3,3})([0-9]{3,3})([0-9]{3,3})$"
+NUMERIC_REPR = r"^([0-9]+)\.([0-9]{3,3})([0-9]{3,3})([0-9]{3,3})$"
 
 def check(major, minor, patch, rcnum):
 
@@ -184,7 +182,7 @@ def compare(left, right):
     #
 
     return (decimal.Decimal(to_numeric(left)) -
-           decimal.Decimal(to_numeric(right)))
+            decimal.Decimal(to_numeric(right)))
 
 CANONICAL_VERSION = '0.4.17.0'
 NUMERIC_VERSION = to_numeric(CANONICAL_VERSION)

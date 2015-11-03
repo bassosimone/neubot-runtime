@@ -70,7 +70,7 @@ class HttpClientStream(HttpStream):
         if self.requests:
             request = self.requests[0]
             if not self.parent.got_response_headers(self, request,
-                                                request.response):
+                                                    request.response):
                 return ERROR, 0
             return nextstate(request, request.response)
         else:
@@ -92,7 +92,7 @@ class HttpClientStream(HttpStream):
             request.response.prettyprintbody("<")
             self.parent.got_response(self, request, request.response)
             if (request["connection"] == "close" or
-              request.response["connection"] == "close"):
+                    request.response["connection"] == "close"):
                 self.close()
         else:
             self.close()

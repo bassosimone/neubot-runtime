@@ -1,8 +1,7 @@
-# neubot/utils_random.py
-
 #
-# Copyright (c) 2011 Simone Basso <bassosimone@gmail.com>,
-#  NEXA Center for Internet & Society at Politecnico di Torino
+# Copyright (c) 2011, 2015
+#     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN)
+#     and Simone Basso <bassosimone@gmail.com>.
 #
 # This file is part of Neubot <http://www.neubot.org/>.
 #
@@ -36,7 +35,7 @@ import random
 # reachable with Windows.  They are stored into
 # library.zip.
 #
-from neubot import utils_hier
+from . import utils_hier
 
 # Maximum depth
 MAXDEPTH = 16

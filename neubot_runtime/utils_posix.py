@@ -1,5 +1,3 @@
-# neubot/utils_posix.py
-
 #
 # Copyright (c) 2011-2013
 #     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN)
@@ -282,12 +280,12 @@ def chuser(passwd):
     for name in list(os.environ.keys()):
         del os.environ[name]
     os.environ.update({
-                       "HOME": "/",
-                       "LOGNAME": passwd.pw_name,
-                       "PATH": "/usr/local/bin:/usr/bin:/bin",
-                       "TMPDIR": "/tmp",
-                       "USER": passwd.pw_name,
-                      })
+        "HOME": "/",
+        "LOGNAME": passwd.pw_name,
+        "PATH": "/usr/local/bin:/usr/bin:/bin",
+        "TMPDIR": "/tmp",
+        "USER": passwd.pw_name,
+    })
 
 def getpwnam(uname):
     ''' Get password database entry by name '''
@@ -339,7 +337,7 @@ if __name__ == '__main__':
 
     sys.path.insert(0, '.')
 
-    from neubot import six
+    from .third_party import six
     import getopt
 
     USAGE = '''\
@@ -357,7 +355,7 @@ usage: utils_posix.py [-v] [-f file] [-u user] chuser
         chuser(passwd)
 
         real_umask = os.umask(0)
-        os.umask(real_umask) 
+        os.umask(real_umask)
         sys.stdout.write('new umask: 0%o\n' % real_umask)
 
         if hasattr(os, 'getresgid'):
@@ -388,7 +386,7 @@ usage: utils_posix.py [-v] [-f file] [-u user] chuser
         ''' Signal handler for the daemonize subcommand '''
         logging.info('delivered signal: %d, %s', signo, frame)
 
-    def __subcommand_daemonize(user, args):
+    def __subcommand_daemonize(_, args):
         ''' `daemonize` subcommand '''
         if len(args) != 0:
             sys.exit(USAGE)

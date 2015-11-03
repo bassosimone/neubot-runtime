@@ -1,5 +1,3 @@
-# neubot/utils_path.py
-
 #
 # Copyright (c) 2012-2013
 #     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN)
@@ -35,7 +33,7 @@ import sys
 if __name__ == "__main__":
     sys.path.insert(0, ".")
 
-from neubot import six
+from .third_party import six
 
 def depth_visit(prefix, components, visit):
     ''' Visit the subtree prefix/components[0]/components[1]... '''

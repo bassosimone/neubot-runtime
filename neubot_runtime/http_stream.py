@@ -26,7 +26,6 @@ import logging
 from .stream import MAXBUF
 from .stream import Stream
 
-from .http_states import IDLE
 from .http_states import BOUNDED
 from .http_states import UNBOUNDED
 from .http_states import CHUNK
@@ -251,11 +250,11 @@ class HttpStream(Stream):
 
     def got_request_line(self, method, uri, protocol):
         ''' Got the request line '''
-        raise RuntimeError("Not expecting a request-line")
+        raise NotImplementedError("Not expecting a request-line")
 
     def got_response_line(self, protocol, code, reason):
         ''' Got the response line '''
-        raise RuntimeError("Not expecting a reponse-line")
+        raise NotImplementedError("Not expecting a reponse-line")
 
     def got_header(self, key, value):
         ''' Got an header '''
@@ -271,62 +270,3 @@ class HttpStream(Stream):
 
     def message_sent(self):
         ''' The message was sent '''
-
-#
-# Quoting from RFC2616, sect. 4.3:
-#
-#   "The presence of a message-body in a request is signaled by the
-#    inclusion of a Content-Length or Transfer-Encoding header field
-#    in the request's message-headers. [...] A server SHOULD read and
-#    forward a message-body on any request; if the request method does
-#    not include defined semantics for an entity-body, then the message
-#    -body SHOULD be ignored when handling the request."
-#
-#   "[...] All responses to the HEAD request method MUST NOT include a
-#    message-body, even though the presence of entity-header fields might
-#    lead one to believe they do. All 1xx (informational), 204 (no content),
-#    and 304 (not modified) responses MUST NOT include a message-body.  All
-#    other responses do include a message-body, although it MAY be of zero
-#    length."
-#
-
-def _parselength(message):
-    ''' Return next state depending on content-length '''
-    value = message["content-length"]
-    try:
-        length = int(value)
-    except ValueError:
-        return ERROR, 0
-    else:
-        if length < 0:
-            return ERROR, 0
-        elif length == 0:
-            return FIRSTLINE, 0
-        else:
-            return BOUNDED, length
-
-def nextstate(request, response=None):
-    ''' Return nextstate depending on request and response '''
-    if response == None:
-        if request["transfer-encoding"] == "chunked":
-            return CHUNK_LENGTH, 0
-        elif request["content-length"]:
-            return _parselength(request)
-        else:
-            return FIRSTLINE, 0
-    else:
-        if (request.method == "HEAD" or response.code[0] == "1" or
-         response.code == "204" or response.code == "304"):
-            return FIRSTLINE, 0
-        elif response["transfer-encoding"] == "chunked":
-            return CHUNK_LENGTH, 0
-        elif response["content-length"]:
-            return _parselength(response)
-        else:
-            # make sure the server *will* close the connection
-            if response.protocol == "HTTP/1.0":
-                return UNBOUNDED, 8000
-            elif response["connection"] == "close":
-                return UNBOUNDED, 8000
-            else:
-                return FIRSTLINE, 0

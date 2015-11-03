@@ -1,8 +1,7 @@
-# neubot/utils_hier.py
-
 #
-# Copyright (c) 2011-2012 Simone Basso <bassosimone@gmail.com>,
-#  NEXA Center for Internet & Society at Politecnico di Torino
+# Copyright (c) 2011-2012, 2015
+#     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN)
+#     and Simone Basso <bassosimone@gmail.com>.
 #
 # This file is part of Neubot <http://www.neubot.org/>.
 #
@@ -113,7 +112,7 @@ if os.name == 'posix':
         SYSCONFDIR = '/etc'
     SYSCONFDIR += '/neubot'
 elif os.name == 'nt':
-    SYSCONFDIR = os.sep.join([os.environ['APPDATA'], 'neubot']) 
+    SYSCONFDIR = os.sep.join([os.environ['APPDATA'], 'neubot'])
 else:
     raise RuntimeError('system not supported')
 
@@ -140,7 +139,7 @@ if os.name == 'posix':
             LOCALSTATEDIR += '/lib'
     LOCALSTATEDIR += '/neubot'
 elif os.name == 'nt':
-    LOCALSTATEDIR = os.sep.join([os.environ['APPDATA'], 'neubot']) 
+    LOCALSTATEDIR = os.sep.join([os.environ['APPDATA'], 'neubot'])
 else:
     raise RuntimeError('system not supported')
 

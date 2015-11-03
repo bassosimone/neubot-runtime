@@ -24,7 +24,6 @@
 import StringIO
 import email.utils
 import collections
-import json
 import socket
 import os
 import logging
@@ -106,7 +105,7 @@ class HttpMessage(object):
         vector.append("\r\n")
 
         for key, value in self.headers.items():
-            key = "-".join(map(lambda s: s.capitalize(), key.split("-")))
+            key = "-".join([s.capitalize() for s in key.split("-")])
             vector.append(key)
             vector.append(": ")
             vector.append(value)
@@ -211,7 +210,7 @@ class HttpMessage(object):
             if not "mimetype" in kwargs:
                 logging.warning("up_to_eof without mimetype")
             self["content-type"] = kwargs.get("mimetype",
-                                       "text/plain")
+                                              "text/plain")
 
         elif kwargs.get("body", None):
             self.body = kwargs.get("body", None)
@@ -241,8 +240,8 @@ class HttpMessage(object):
         ''' Prepare a redirect response '''
         if not target.startswith("/"):
             target = "/" + target
-        location = "http://%s%s" % (utils_net.format_epnt(
-                                    stream.myname), target)
+        location = "http://%s%s" % (utils_net.format_epnt(stream.myname),
+                                    target)
         body = REDIRECT % (target, target)
         self.compose(code="302", reason="Found", body=body,
                      mimetype="text/html; charset=UTF-8")
@@ -250,33 +249,7 @@ class HttpMessage(object):
 
     def prettyprintbody(self, prefix):
         ''' Pretty print body '''
-
-        return  # Slow in some cases; disable
-
-        if self["content-type"] not in ("application/json", "text/xml",
-                                        "application/xml"):
-            return
-
-        # Grab the whole body
-        if not isinstance(self.body, basestring):
-            body = self.body.read()
-        else:
-            body = self.body
-
-        # Decode the body
-        if self["content-type"] == "application/json":
-            string = json.dumps(json.loads(body),
-              indent=4, sort_keys=True)
-        elif self["content-type"] in ("text/xml", "application/xml"):
-            string = body
-
-        # Prettyprint
-        for line in string.split("\n"):
-            logging.debug("%s %s", prefix, line.rstrip())
-
-        # Seek to the beginning if needed
-        if not isinstance(self.body, basestring):
-            utils.safe_seek(self.body, 0)
+        # Actually not implemented because it was too slow in some cases
 
     def content_length(self):
         ''' Get content length '''

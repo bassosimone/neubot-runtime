@@ -29,8 +29,6 @@ from .http_server_stream import HttpServerStream
 from .stream_handler import StreamHandler
 from .poller import POLLER
 
-from . import utils_net
-
 class HttpServer(StreamHandler):
 
     ''' Manages many HTTP connections '''
@@ -97,7 +95,8 @@ class HttpServer(StreamHandler):
         except:
             self._on_internal_error(stream, request)
 
-    def _on_internal_error(self, stream, request):
+    @staticmethod
+    def _on_internal_error(stream, request):
         ''' Generate 500 Internal Server Error page '''
         logging.error('Internal error while serving response', exc_info=1)
         response = HttpMessage()
@@ -109,29 +108,7 @@ class HttpServer(StreamHandler):
     def connection_made(self, sock, endpoint, rtt):
         ''' Invoked when the connection is made '''
         stream = HttpServerStream(self.poller)
-        nconf = self.conf.copy()
-
-        #
-        # Setup SSL if needed.
-        # XXX The private key and public certificate file is
-        # hardcoded and must be readable by the user that owns
-        # this process for SSL to work.  We can live with the
-        # former issue but the latter belongs clearly to the
-        # not-so-good dept.  (Even if loading a copy of the
-        # private key at startup and then keeping it in memory
-        # is dangerous as well.  Yes an attacker cannot read
-        # the file but she can read the process memory and
-        # find the private key without too much effort.)
-        # Maybe radical privilege separation is the answer
-        # here, but I'm not sure: I need to study more.
-        #
-        port = utils_net.getsockname(sock)[1]
-        if port in self._ssl_ports:
-            nconf["net.stream.certfile"] = "/etc/neubot/cert.pem"
-            nconf["net.stream.secure"] = True
-            nconf["net.stream.server_side"] = True
-
-        stream.attach(self, sock, nconf)
+        stream.attach(self, sock, self.conf.copy())
         self.connection_ready(stream)
 
     def connection_ready(self, stream):

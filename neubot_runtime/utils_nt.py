@@ -1,5 +1,3 @@
-# neubot/utils_nt.py
-
 #
 # Copyright (c) 2013
 #     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN)

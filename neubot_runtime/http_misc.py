@@ -23,20 +23,15 @@
 
 import urlparse
 
-from .http_states import IDLE
 from .http_states import BOUNDED
 from .http_states import UNBOUNDED
-from .http_states import CHUNK
-from .http_states import CHUNK_END
 from .http_states import FIRSTLINE
-from .http_states import HEADER
 from .http_states import CHUNK_LENGTH
-from .http_states import TRAILER
 from .http_states import ERROR
 
 def urlsplit(uri):
     ''' Wrapper for urlparse.urlsplit() '''
-    scheme, netloc, path, query, fragment = urlparse.urlsplit(uri)
+    scheme, netloc, path, query, _ = urlparse.urlsplit(uri)
     if scheme != "http" and scheme != "https":
         raise ValueError("Unknown scheme")
 
@@ -117,7 +112,7 @@ def nextstate(request, response=None):
             return FIRSTLINE, 0
     else:
         if (request.method == "HEAD" or response.code[0] == "1" or
-         response.code == "204" or response.code == "304"):
+                response.code == "204" or response.code == "304"):
             return FIRSTLINE, 0
         elif response["transfer-encoding"] == "chunked":
             return CHUNK_LENGTH, 0
