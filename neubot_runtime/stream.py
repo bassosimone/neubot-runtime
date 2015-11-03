@@ -31,7 +31,6 @@ import collections
 import types
 import logging
 
-from ..log import oops
 from .pollable import Pollable
 from .pollable import SUCCESS
 from .pollable import WANT_READ
@@ -39,7 +38,7 @@ from .pollable import WANT_WRITE
 from .pollable import CONNRST
 from .async_socket import AsyncSocket
 
-from ..utils import utils_net
+from . import utils_net
 
 # Maximum amount of bytes we read from a socket
 MAXBUF = 1 << 18
@@ -99,7 +98,7 @@ class Stream(Pollable):
 
     def atclose(self, func):
         if func in self.atclosev:
-            oops("Duplicate atclose(): %s" % func)
+            logging.warning("Duplicate atclose(): %s", func)
         self.atclosev.add(func)
 
     def unregister_atclose(self, func):
@@ -199,7 +198,7 @@ class Stream(Pollable):
 
         if octets:
             if type(octets) == types.UnicodeType:
-                oops("Received unicode input")
+                logging.warning("Received unicode input")
                 octets = octets.encode("utf-8")
 
         return octets

@@ -21,9 +21,8 @@
 
 """ Stream handler class """
 
-from ..utils import utils_net
-
 from .listener import Listener
+from . import utils_net
 
 class StreamHandler(object):
     """ Handle many streams at once """
