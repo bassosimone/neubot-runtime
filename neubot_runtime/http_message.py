@@ -1,8 +1,7 @@
-# neubot/http/message.py
-
 #
-# Copyright (c) 2010-2011 Simone Basso <bassosimone@gmail.com>,
-#  NEXA Center for Internet & Society at Politecnico di Torino
+# Copyright (c) 2010-2011, 2015
+#     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN),
+#     and Simone Basso <bassosimone@gmail.com>.
 #
 # This file is part of Neubot <http://www.neubot.org/>.
 #
@@ -22,8 +21,6 @@
 
 ''' An HTTP message '''
 
-# Will be replaced by neubot/http_utils.py
-
 import StringIO
 import email.utils
 import collections
@@ -33,10 +30,8 @@ import socket
 import os
 import logging
 
-from ..log import oops
-
-from .. import utils
-from ..utils import utils_net
+from . import utils
+from . import utils_net
 
 REDIRECT = '''\
 <HTML>
@@ -226,7 +221,7 @@ class Message(object):
                 #
                 self["host"] = kwargs.get("host", "")
                 if not self["host"]:
-                    oops("Missing host header")
+                    logging.warning("Missing host header")
 
         self.code = kwargs.get("code", "")
         self.reason = kwargs.get("reason", "")
@@ -253,7 +248,7 @@ class Message(object):
         #
         if kwargs.get("up_to_eof", False):
             if not "mimetype" in kwargs:
-                oops("up_to_eof without mimetype")
+                logging.warning("up_to_eof without mimetype")
             self["content-type"] = kwargs.get("mimetype",
                                        "text/plain")
 

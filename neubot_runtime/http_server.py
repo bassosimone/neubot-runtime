@@ -1,8 +1,7 @@
-# neubot/http/server.py
-
 #
-# Copyright (c) 2010-2011 Simone Basso <bassosimone@gmail.com>,
-#  NEXA Center for Internet & Society at Politecnico di Torino
+# Copyright (c) 2010-2011, 2015
+#     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN),
+#     and Simone Basso <bassosimone@gmail.com>.
 #
 # This file is part of Neubot <http://www.neubot.org/>.
 #
@@ -26,16 +25,15 @@ import sys
 import time
 import logging
 
-from .stream import ERROR
-from .message import Message
-from .stream import nextstate
-from .stream import StreamHTTP
-from ..lib_net.stream_handler import StreamHandler
-from ..lib_net.poller import POLLER
+from .http_stream import ERROR
+from .http_message import Message
+from .http_stream import nextstate
+from .http_stream import StreamHTTP
+from .stream_handler import StreamHandler
+from .poller import POLLER
 
-from .. import log
-from .. import utils
-from ..utils import utils_net
+from . import utils
+from . import utils_net
 
 #
 # 3-letter abbreviation of month names.
@@ -124,8 +122,8 @@ class ServerStream(StreamHTTP):
             if nbytes == "0":
                 nbytes = "-"
 
-        log.log_access("%s - - [%s] \"%s\" %s %s", address, timestring,
-                       requestline, statuscode, nbytes)
+        logging.info("%s - - [%s] \"%s\" %s %s", address, timestring,
+                     requestline, statuscode, nbytes)
 
 class ServerHTTP(StreamHandler):
 

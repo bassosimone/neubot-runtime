@@ -1,8 +1,7 @@
-# neubot/http/stream.py
-
 #
-# Copyright (c) 2011 Simone Basso <bassosimone@gmail.com>,
-#  NEXA Center for Internet & Society at Politecnico di Torino
+# Copyright (c) 2011, 2015
+#     Nexa Center for Internet & Society, Politecnico di Torino (DAUIN),
+#     and Simone Basso <bassosimone@gmail.com>.
 #
 # This file is part of Neubot <http://www.neubot.org/>.
 #
@@ -22,26 +21,24 @@
 
 ''' HTTP stream '''
 
-# Will be replaced by neubot/http_clnt.py and neubot/http_srvr.py
-
 import logging
 
-from ..lib_net.stream import MAXBUF
-from ..lib_net.stream import Stream
+from .stream import MAXBUF
+from .stream import Stream
 
 # Accepted HTTP protocols
-PROTOCOLS = [ "HTTP/1.0", "HTTP/1.1" ]
+PROTOCOLS = ("HTTP/1.0", "HTTP/1.1")
 
 # Maximum allowed line length
 MAXLINE = 1 << 15
 
 # Possible states of the receiver
 (IDLE, BOUNDED, UNBOUNDED, CHUNK, CHUNK_END, FIRSTLINE,
- HEADER, CHUNK_LENGTH, TRAILER, ERROR) = range(0,10)
+ HEADER, CHUNK_LENGTH, TRAILER, ERROR) = range(0, 10)
 
 # receiver state names
-STATES = ["IDLE", "BOUNDED", "UNBOUNDED", "CHUNK", "CHUNK_END", "FIRSTLINE",
-          "HEADER", "CHUNK_LENGTH", "TRAILER", "ERROR"]
+STATES = ("IDLE", "BOUNDED", "UNBOUNDED", "CHUNK", "CHUNK_END", "FIRSTLINE",
+          "HEADER", "CHUNK_LENGTH", "TRAILER", "ERROR")
 
 #
 # When messages are not bigger than SMALLMESSAGE we join headers
