@@ -34,7 +34,7 @@ import sys
 import os.path
 import re
 
-from neubot import utils_path
+from ..utils import utils_path
 
 MAXDEPTH = 8
 REGEX = '<!--#include virtual="([A-Za-z0-9./_-]+)"-->'

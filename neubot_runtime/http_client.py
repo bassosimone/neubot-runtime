@@ -1,4 +1,4 @@
-# neubot/http/client.py
+# neubot/lib_http/client.py
 
 #
 # Copyright (c) 2010-2011 Simone Basso <bassosimone@gmail.com>,
@@ -25,23 +25,15 @@
 # Will be replaced by neubot/http_clnt.py
 
 import collections
-import os.path
-import sys
 import logging
 
-if __name__ == "__main__":
-    sys.path.insert(0, ".")
-
-from neubot.config import CONFIG
-from neubot.http.stream import StreamHTTP
-from neubot.net.stream import StreamHandler
-from neubot.http.stream import ERROR
-from neubot.http.stream import nextstate
-from neubot.http.message import Message
-from neubot.net.poller import POLLER
-from neubot import utils
-from neubot import utils_net
-from neubot.main import common
+from .stream import StreamHTTP
+from ..lib_net.stream_handler import StreamHandler
+from .stream import ERROR
+from .stream import nextstate
+from .message import Message
+from . import utils
+from .utils import utils_net
 
 class ClientStream(StreamHTTP):
 
@@ -158,71 +150,3 @@ class ClientHTTP(StreamHandler):
         stream = ClientStream(self.poller)
         stream.attach(self, sock, self.conf)
         self.connection_ready(stream)
-
-class TestClient(ClientHTTP):
-
-    ''' Test client for this module '''
-
-    def connection_ready(self, stream):
-        ''' Invoked when the connection is ready '''
-        method = self.conf["http.client.method"]
-        stdout = self.conf["http.client.stdout"]
-        uri = self.conf["http.client.uri"]
-
-        request = Message()
-        if method == "PUT":
-            fpath = uri.split("/")[-1]
-            if not os.path.exists(fpath):
-                logging.error("* Local file does not exist: %s", fpath)
-                sys.exit(1)
-            request.compose(method=method, uri=uri, keepalive=False,
-              mimetype="text/plain", body=open(fpath, "rb"))
-        else:
-            request.compose(method=method, uri=uri, keepalive=False)
-
-        response = Message()
-        if method == "GET" and not stdout:
-            fpath = uri.split("/")[-1]
-            if os.path.exists(fpath):
-                logging.error("* Local file already exists: %s", fpath)
-                sys.exit(1)
-            response.body = open(fpath, "wb")
-        else:
-            response.body = sys.stdout
-
-        stream.send_request(request, response)
-
-CONFIG.register_defaults({
-    "http.client.class": "",
-    "http.client.method": "GET",
-    "http.client.stdout": False,
-    "http.client.uri": "",
-})
-
-def main(args):
-
-    ''' main() of this module '''
-
-    CONFIG.register_descriptions({
-        "http.client.class": "Specify alternate ClientHTTP-like class",
-        "http.client.method": "Specify alternate HTTP method",
-        "http.client.stdout": "Enable writing response to stdout",
-        "http.client.uri": "Specify URI to download from/upload to",
-    })
-
-    common.main("http.client", "Simple Neubot HTTP client", args)
-    conf = CONFIG.copy()
-
-    if not conf["http.client.uri"]:
-        sys.stdout.write("Please, specify URI via -D http.client.uri=URI\n")
-        sys.exit(0)
-
-    client = TestClient(POLLER)
-    client.configure(conf)
-    client.connect_uri(conf["http.client.uri"])
-
-    POLLER.loop()
-    sys.exit(0)
-
-if __name__ == "__main__":
-    main(sys.argv)

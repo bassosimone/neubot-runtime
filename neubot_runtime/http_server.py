@@ -22,31 +22,20 @@
 
 ''' HTTP server '''
 
-import StringIO
-import mimetypes
-import os.path
 import sys
 import time
 import logging
 
-if __name__ == "__main__":
-    sys.path.insert(0, ".")
+from .stream import ERROR
+from .message import Message
+from .stream import nextstate
+from .stream import StreamHTTP
+from ..lib_net.stream_handler import StreamHandler
+from ..lib_net.poller import POLLER
 
-from neubot.config import CONFIG
-from neubot.http.stream import ERROR
-from neubot.http.message import Message
-from neubot.http.ssi import ssi_replace
-from neubot.http.stream import nextstate
-from neubot.http.stream import StreamHTTP
-from neubot.log import LOG
-from neubot.net.stream import StreamHandler
-from neubot.net.poller import POLLER
-
-from neubot.main import common
-
-from neubot import utils
-from neubot import utils_path
-from neubot import utils_net
+from .. import log
+from .. import utils
+from ..utils import utils_net
 
 #
 # 3-letter abbreviation of month names.
@@ -135,10 +124,8 @@ class ServerStream(StreamHTTP):
             if nbytes == "0":
                 nbytes = "-"
 
-        LOG.log("ACCESS",
-                "%s - - [%s] \"%s\" %s %s",
-                (address, timestring, requestline, statuscode, nbytes),
-                None)
+        log.log_access("%s - - [%s] \"%s\" %s %s", address, timestring,
+                       requestline, statuscode, nbytes)
 
 class ServerHTTP(StreamHandler):
 
@@ -193,64 +180,8 @@ class ServerHTTP(StreamHandler):
                 child.process_request(stream, request)
                 return
 
-        rootdir = self.conf.get("http.server.rootdir", "")
-        if not rootdir:
-            response.compose(code="403", reason="Forbidden",
-                             body="403 Forbidden")
-            stream.send_response(request, response)
-            return
-
-        if request.uri == "/":
-            response.compose_redirect(stream, "/api/index")
-            stream.send_response(request, response)
-            return
-
-        if '?' in request.uri:
-            request_uri = request.uri.split('?')[0]
-        else:
-            request_uri = request.uri
-
-        fullpath = utils_path.append(rootdir, request_uri, True)
-        if not fullpath:
-            response.compose(code="403", reason="Forbidden",
-                             body="403 Forbidden")
-            stream.send_response(request, response)
-            return
-
-        try:
-            filep = open(fullpath, "rb")
-        except (IOError, OSError):
-            logging.error("HTTP: Not Found: %s (WWWDIR: %s)",
-                          fullpath, rootdir)
-            response.compose(code="404", reason="Not Found",
-                             body="404 Not Found")
-            stream.send_response(request, response)
-            return
-
-        if self.conf.get("http.server.mime", True):
-            mimetype, encoding = mimetypes.guess_type(fullpath)
-
-            # Do not attempt SSI if the resource is, say, gzipped
-            if not encoding:
-                if mimetype == "text/html":
-                    ssi = self.conf.get("http.server.ssi", False)
-                    if ssi:
-                        body = ssi_replace(rootdir, filep)
-                        filep = StringIO.StringIO(body)
-
-                #XXX Do we need to enforce the charset?
-                if mimetype in ("text/html", "application/x-javascript"):
-                    mimetype += "; charset=UTF-8"
-            else:
-                response["content-encoding"] = encoding
-
-        else:
-            mimetype = "text/plain"
-
-        response.compose(code="200", reason="Ok", body=filep,
-                         mimetype=mimetype)
-        if request.method == "HEAD":
-            utils.safe_seek(filep, 0, os.SEEK_END)
+        response.compose(code="403", reason="Forbidden",
+                         body="403 Forbidden")
         stream.send_response(request, response)
 
     def got_request(self, stream, request):
@@ -307,42 +238,3 @@ class ServerHTTP(StreamHandler):
         logging.warning("ServerHTTP: accept() failed: %s", str(exception))
 
 HTTP_SERVER = ServerHTTP(POLLER)
-
-CONFIG.register_defaults({
-    "http.server.address": "",
-    "http.server.class": "",
-    "http.server.mime": True,
-    "http.server.ports": "8080,",
-    "http.server.rootdir": "",
-    "http.server.ssi": False,
-})
-
-def main(args):
-
-    ''' main() function of this module '''
-
-    CONFIG.register_descriptions({
-        "http.server.address": "Address to listen to",
-        "http.server.class": "Use alternate ServerHTTP-like class",
-        "http.server.mime": "Enable code that guess mime types",
-        "http.server.ports": "List of ports to listen to",
-        "http.server.rootdir": "Root directory for static pages",
-        "http.server.ssi": "Enable server-side includes",
-    })
-
-    common.main("http.server", "Neubot simple HTTP server", args)
-    conf = CONFIG.copy()
-
-    HTTP_SERVER.configure(conf)
-
-    if conf["http.server.rootdir"] == ".":
-        conf["http.server.rootdir"] = os.path.abspath(".")
-
-    for port in conf["http.server.ports"].split(","):
-        if port:
-            HTTP_SERVER.listen((conf["http.server.address"], int(port)))
-
-    POLLER.loop()
-
-if __name__ == "__main__":
-    main(sys.argv)
