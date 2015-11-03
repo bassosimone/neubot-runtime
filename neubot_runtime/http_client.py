@@ -21,86 +21,15 @@
 
 ''' HTTP client '''
 
-import collections
 import logging
 
-from .http_stream import StreamHTTP
 from .stream_handler import StreamHandler
-from .http_stream import ERROR
-from .http_stream import nextstate
-from .message import Message
+from .http_client_stream import HttpClientStream
+from .http_message import HttpMessage
 from . import utils
 from . import utils_net
 
-class ClientStream(StreamHTTP):
-
-    ''' Specializes StreamHTTP and implements the client
-        side of an HTTP channel '''
-
-    def __init__(self, poller):
-        ''' Initialize client stream '''
-        StreamHTTP.__init__(self, poller)
-        self.requests = collections.deque()
-
-    def send_request(self, request, response=None):
-        ''' Sends a request '''
-        self.requests.append(request)
-        if not response:
-            response = Message()
-        request.response = response
-        self.send_message(request)
-
-    def got_response_line(self, protocol, code, reason):
-        ''' Invoked when we receive the response line '''
-        if self.requests:
-            response = self.requests[0].response
-            response.protocol = protocol
-            response.code = code
-            response.reason = reason
-        else:
-            self.close()
-
-    def got_header(self, key, value):
-        ''' Invoked when we receive an header '''
-        if self.requests:
-            response = self.requests[0].response
-            response[key] = value
-        else:
-            self.close()
-
-    def got_end_of_headers(self):
-        ''' Invoked at the end of headers '''
-        if self.requests:
-            request = self.requests[0]
-            if not self.parent.got_response_headers(self, request,
-                                                request.response):
-                return ERROR, 0
-            return nextstate(request, request.response)
-        else:
-            return ERROR, 0
-
-    def got_piece(self, piece):
-        ''' Invoked when we receive a body piece '''
-        if self.requests:
-            response = self.requests[0].response
-            response.body.write(piece)
-        else:
-            self.close()
-
-    def got_end_of_body(self):
-        ''' Invoked at the end of the body '''
-        if self.requests:
-            request = self.requests.popleft()
-            utils.safe_seek(request.response.body, 0)
-            request.response.prettyprintbody("<")
-            self.parent.got_response(self, request, request.response)
-            if (request["connection"] == "close" or
-              request.response["connection"] == "close"):
-                self.close()
-        else:
-            self.close()
-
-class ClientHTTP(StreamHandler):
+class HttpClient(StreamHandler):
 
     ''' Manages one or more HTTP streams '''
 
@@ -113,7 +42,7 @@ class ClientHTTP(StreamHandler):
     def connect_uri(self, uri, count=1):
         ''' Connects to the given URI '''
         try:
-            message = Message()
+            message = HttpMessage()
             message.compose(method="GET", uri=uri)
             if message.scheme == "https":
                 self.conf["net.stream.secure"] = True
@@ -144,6 +73,6 @@ class ClientHTTP(StreamHandler):
         # XXX If we didn't connect via connect_uri()...
         if not self.host_header:
             self.host_header = utils_net.format_epnt(endpoint)
-        stream = ClientStream(self.poller)
+        stream = HttpClientStream(self.poller)
         stream.attach(self, sock, self.conf)
         self.connection_ready(stream)

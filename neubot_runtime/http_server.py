@@ -22,110 +22,16 @@
 ''' HTTP server '''
 
 import sys
-import time
 import logging
 
-from .http_stream import ERROR
-from .http_message import Message
-from .http_stream import nextstate
-from .http_stream import StreamHTTP
+from .http_message import HttpMessage
+from .http_server_stream import HttpServerStream
 from .stream_handler import StreamHandler
 from .poller import POLLER
 
-from . import utils
 from . import utils_net
 
-#
-# 3-letter abbreviation of month names.
-# We use our abbreviation because we don't want the
-# month name to depend on the locale.
-# Note that Python tm.tm_mon is in range [1,12].
-#
-MONTH = [
-    "", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
-    "Sep", "Oct", "Nov", "Dec",
-]
-
-class ServerStream(StreamHTTP):
-
-    ''' Specializes StreamHTTP to implement the server-side
-        of an HTTP channel '''
-
-    def __init__(self, poller):
-        ''' Initialize '''
-        StreamHTTP.__init__(self, poller)
-        self.response_rewriter = None
-        self.request = None
-
-    def got_request_line(self, method, uri, protocol):
-        ''' Invoked when we get a request line '''
-        self.request = Message(method=method, uri=uri, protocol=protocol)
-
-    def got_header(self, key, value):
-        ''' Invoked when we get an header '''
-        if self.request:
-            self.request[key] = value
-        else:
-            self.close()
-
-    def got_end_of_headers(self):
-        ''' Invoked at the end of headers '''
-        if self.request:
-            if not self.parent.got_request_headers(self, self.request):
-                return ERROR, 0
-            return nextstate(self.request)
-        else:
-            return ERROR, 0
-
-    def got_piece(self, piece):
-        ''' Invoked when we read a piece of the body '''
-        if self.request:
-            self.request.body.write(piece)
-        else:
-            self.close()
-
-    def got_end_of_body(self):
-        ''' Invoked at the end of the body '''
-        if self.request:
-            utils.safe_seek(self.request.body, 0)
-            self.request.prettyprintbody("<")
-            self.parent.got_request(self, self.request)
-            self.request = None
-        else:
-            self.close()
-
-    def send_response(self, request, response):
-        ''' Send a response to the client '''
-
-        if self.response_rewriter:
-            self.response_rewriter(request, response)
-
-        if request['connection'] == 'close' or request.protocol == 'HTTP/1.0':
-            del response['connection']
-            response['connection'] = 'close'
-
-        self.send_message(response)
-
-        if response['connection'] == 'close':
-            self.close()
-
-        address = self.peername[0]
-        now = time.gmtime()
-        timestring = "%02d/%s/%04d:%02d:%02d:%02d -0000" % (now.tm_mday,
-          MONTH[now.tm_mon], now.tm_year, now.tm_hour, now.tm_min, now.tm_sec)
-        requestline = request.requestline
-        statuscode = response.code
-
-        nbytes = "-"
-        if response["content-length"]:
-            nbytes = response["content-length"]
-            if nbytes == "0":
-                nbytes = "-"
-
-        logging.info("%s - - [%s] \"%s\" %s %s", address, timestring,
-                     requestline, statuscode, nbytes)
-
-class ServerHTTP(StreamHandler):
+class HttpServer(StreamHandler):
 
     ''' Manages many HTTP connections '''
 
@@ -165,7 +71,7 @@ class ServerHTTP(StreamHandler):
 
     def process_request(self, stream, request):
         ''' Process a request and generate the response '''
-        response = Message()
+        response = HttpMessage()
 
         if not request.uri.startswith("/"):
             response.compose(code="403", reason="Forbidden",
@@ -194,7 +100,7 @@ class ServerHTTP(StreamHandler):
     def _on_internal_error(self, stream, request):
         ''' Generate 500 Internal Server Error page '''
         logging.error('Internal error while serving response', exc_info=1)
-        response = Message()
+        response = HttpMessage()
         response.compose(code="500", reason="Internal Server Error",
                          body="500 Internal Server Error", keepalive=0)
         stream.send_response(request, response)
@@ -202,7 +108,7 @@ class ServerHTTP(StreamHandler):
 
     def connection_made(self, sock, endpoint, rtt):
         ''' Invoked when the connection is made '''
-        stream = ServerStream(self.poller)
+        stream = HttpServerStream(self.poller)
         nconf = self.conf.copy()
 
         #
@@ -233,6 +139,6 @@ class ServerHTTP(StreamHandler):
 
     def accept_failed(self, listener, exception):
         ''' Print a warning if accept() fails (often due to SSL) '''
-        logging.warning("ServerHTTP: accept() failed: %s", str(exception))
+        logging.warning("HttpServer: accept() failed: %s", str(exception))
 
-HTTP_SERVER = ServerHTTP(POLLER)
+HTTP_SERVER = HttpServer(POLLER)

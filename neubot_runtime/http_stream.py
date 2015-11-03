@@ -47,7 +47,7 @@ STATES = ("IDLE", "BOUNDED", "UNBOUNDED", "CHUNK", "CHUNK_END", "FIRSTLINE",
 #
 SMALLMESSAGE = 8000
 
-class StreamHTTP(Stream):
+class HttpStream(Stream):
 
     ''' Specializes stream in order to handle the Hyper-Text Transfer
         Protocol (HTTP) '''
