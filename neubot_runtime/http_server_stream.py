@@ -24,9 +24,9 @@
 import time
 import logging
 
-from .http_stream import ERROR
+from .http_states import ERROR
 from .http_message import HttpMessage
-from .http_stream import nextstate
+from .http_misc import nextstate
 from .http_stream import HttpStream
 
 from . import utils
