@@ -30,21 +30,13 @@ import collections
 import os.path
 import random
 
-#
-# Must use WWWDIR because Python modules are not
-# reachable with Windows.  They are stored into
-# library.zip.
-#
-from . import utils_hier
-
 # Maximum depth
 MAXDEPTH = 16
 
 # Size of a block
 BLOCKSIZE = 262144
 
-def listdir(curdir, vector, depth):
-
+def _listdir(curdir, vector, depth):
     ''' Make a list of all the files in a given directory
         up to a certain depth '''
 
@@ -54,18 +46,17 @@ def listdir(curdir, vector, depth):
     for entry in os.listdir(curdir):
         entry = os.path.join(curdir, entry)
         if os.path.isdir(entry):
-            listdir(entry, vector, depth + 1)
+            _listdir(entry, vector, depth + 1)
         elif os.path.isfile(entry):
             vector.append(entry)
 
-def create_base_block(length):
-
+def _create_base_block(path, length):
     ''' Create a base block of length @length '''
 
     base_block = collections.deque()
 
     files = []
-    listdir(utils_hier.WWWDIR, files, 0)
+    _listdir(path, files, 0)
     random.shuffle(files)
 
     for fpath in files:
@@ -79,7 +70,7 @@ def create_base_block(length):
             wordlist = list(word)
             random.shuffle(wordlist)
 
-            base_block.append(''.join(wordlist))
+            base_block.append(b''.join(wordlist))
             length -= amount
             if length <= 0:
                 break
@@ -89,68 +80,27 @@ def create_base_block(length):
 
     return base_block
 
-def block_generator(size):
-
+def _block_generator(path, size):
     ''' Generator that returns blocks '''
 
-    block = create_base_block(size)
+    block = _create_base_block(path, size)
     while True:
         block.rotate(random.randrange(4, 16))
-        yield ''.join(block)
+        yield b''.join(block)
 
 class RandomBlocks(object):
-
     ''' Generate blocks randomly shuffling a base block '''
 
-    def __init__(self, size=BLOCKSIZE):
+    def __init__(self, path, size=BLOCKSIZE):
         ''' Initialize random blocks generator '''
-        self._generator = block_generator(size)
+        self._generator = _block_generator(path, size)
+        self._path = path
         self.blocksiz = size
 
     def reinit(self):
         ''' Reinitialize the generator '''
-        self._generator = block_generator(self.blocksiz)
+        self._generator = _block_generator(self._path, self.blocksiz)
 
     def get_block(self):
         ''' Return a block of data '''
         return self._generator.next()
-
-RANDOMBLOCKS = RandomBlocks()
-
-#
-# XXX Create and discard the first block at the very
-# beginning, so we are sure that we can fetch all the
-# needed files in the common case, i.e. when we
-# startup as root.
-#
-RANDOMBLOCKS.get_block()
-
-class RandomBody(object):
-
-    '''
-     This class implements a minimal file-like interface and
-     employs the random number generator to create the content
-     returned by its read() method.
-    '''
-
-    def __init__(self, total):
-        ''' Initialize random body object '''
-        self.total = int(total)
-
-    def read(self, want=None):
-        ''' Read up to @want bytes '''
-        if not want:
-            want = self.total
-        amt = min(self.total, min(want, RANDOMBLOCKS.blocksiz))
-        if amt:
-            self.total -= amt
-            return RANDOMBLOCKS.get_block()[:amt]
-        else:
-            return ''
-
-    def seek(self, offset=0, whence=0):
-        ''' Seek stub '''
-
-    def tell(self):
-        ''' Tell the amounts of bytes left '''
-        return self.total
