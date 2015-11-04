@@ -30,6 +30,8 @@ import collections
 import os.path
 import random
 
+from .third_party.six import PY3
+
 # Maximum depth
 MAXDEPTH = 16
 
@@ -70,7 +72,11 @@ def _create_base_block(path, length):
             wordlist = list(word)
             random.shuffle(wordlist)
 
-            base_block.append(b''.join(wordlist))
+            if PY3:
+                base_block.append(bytes(wordlist))
+            else:
+                base_block.append(b''.join(wordlist))
+
             length -= amount
             if length <= 0:
                 break
@@ -103,4 +109,4 @@ class RandomBlocks(object):
 
     def get_block(self):
         ''' Return a block of data '''
-        return self._generator.next()
+        return next(self._generator)
