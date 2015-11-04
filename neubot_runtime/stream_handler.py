@@ -21,6 +21,7 @@
 
 """ Stream handler class """
 
+from .connector import Connector
 from .listener import Listener
 from . import utils_net
 
@@ -54,10 +55,12 @@ class StreamHandler(object):
     def accept_failed(self, listener, exception):
         """ Called when accept fails """
 
-    @staticmethod
-    def connect(endpoint, count=1):
+    def connect(self, endpoint, count=1):
         """ Connect to the remote endpoint """
-        raise NotImplementedError
+        if count != 1:
+            raise NotImplementedError
+        connector = Connector(self.poller, self)
+        connector.connect(endpoint, self.conf)
 
     def connection_failed(self, connector, exception):
         """ Called when a connect attempt failed """
