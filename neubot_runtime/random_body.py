@@ -32,7 +32,7 @@ class RandomBody(object):
     def __init__(self, random_blocks, total):
         ''' Initialize random body object '''
         self._random_blocks = random_blocks
-        self._total = int(total)
+        self._total = total
 
     def read(self, want=None):
         ''' Read up to @want bytes '''
