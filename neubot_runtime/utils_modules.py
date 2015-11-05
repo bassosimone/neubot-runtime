@@ -21,20 +21,12 @@
 
 """ Utils for loading tests as modules """
 
-#
-# Python3-ready: yes
-#
-
 import logging
 import os
 import sys
 
-from . import utils_hier
-
-def modprobe(filt, context, message):
+def modprobe(rootdir, filt, context, message):
     """ Probe all modules """
-
-    rootdir = utils_hier.ROOTDIR
 
     for name in os.listdir(rootdir):
         pathname = os.sep.join([rootdir, name])
