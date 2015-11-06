@@ -38,9 +38,6 @@ from .http_states import ERROR
 
 from .third_party import six
 
-# Accepted HTTP protocols
-PROTOCOLS = ("HTTP/1.0", "HTTP/1.1")
-
 # Maximum allowed line length
 MAXLINE = 1 << 15
 
@@ -56,35 +53,28 @@ STATES = ("IDLE", "BOUNDED", "UNBOUNDED", "CHUNK", "CHUNK_END", "FIRSTLINE",
 SMALLMESSAGE = 8000
 
 class HttpStream(Stream):
-
-    ''' Specializes stream in order to handle the Hyper-Text Transfer
-        Protocol (HTTP) '''
+    ''' HTTP stream '''
 
     def __init__(self, poller):
-        ''' Initialize the stream '''
         Stream.__init__(self, poller)
-        self.incoming = []
-        self.state = FIRSTLINE
-        self.left = 0
+        self._incoming = []
+        self._state = FIRSTLINE
+        self._left = 0
 
     def connection_made(self):
-        ''' Called when the connection is created '''
+        logging.debug("now ready to read http messages")
         self.start_recv()
 
-    # Close
-
-    def connection_lost(self, exception):
-        ''' Called when the connection is lost '''
+    def connection_lost(self, _):
         # it's possible for body to be `up to end of file`
-        if self.eof and self.state == UNBOUNDED:
+        if self.eof and self._state == UNBOUNDED:
             self.got_end_of_body()
-        self.incoming = None
-
-    # Send
+        self._incoming = None
 
     def send_message(self, message, smallmessage=SMALLMESSAGE):
         ''' Send a message '''
         if message.length >= 0 and message.length <= smallmessage:
+            logging.debug("sending small http message")
             vector = []
             vector.append(message.serialize_headers().read())
             body = message.serialize_body()
@@ -92,46 +82,43 @@ class HttpStream(Stream):
                 vector.append(body.read())
             else:
                 vector.append(body)
-            data = "".join(vector)
+            data = b"".join(vector)
             self.start_send(data)
         else:
             self.start_send(message.serialize_headers())
             self.start_send(message.serialize_body())
 
-    # Recv
-
     def recv_complete(self, data):
-        ''' We've received successfully some data '''
-        if self.close_complete or self.close_pending:
-            return
-
-        #This one should be debug2 as well
-        #logging.debug("HTTP receiver: got %d bytes", len(data))
+        logging.debug("processing incoming http data...")
 
         # merge with previous fragments (if any)
-        if self.incoming:
-            self.incoming.append(data)
-            data = "".join(self.incoming)
-            del self.incoming[:]
+        if self._incoming:
+            logging.debug("merging new data with previous data")
+            self._incoming.append(data)
+            data = b"".join(self._incoming)
+            del self._incoming[:]
 
         # consume the current fragment
         offset = 0
         length = len(data)
+        logging.debug("the current fragment is %d bytes", length)
         while length > 0:
-            #ostate = self.state        # needed by commented-out code below
 
             # when we know the length we're looking for a piece
-            if self.left > 0:
-                count = min(self.left, length)
+            if self._left > 0:
+                logging.debug("looking for %d more bytes", self._left)
+                count = min(self._left, length)
+                logging.debug("capping bytes to %d", count)
                 piece = six.buff(data, offset, count)
-                self.left -= count
+                logging.debug("found %d-bytes piece", len(piece))
+                self._left -= count
                 offset += count
                 length -= count
                 self._got_piece(piece)
 
             # otherwise we're looking for the next line
-            elif self.left == 0:
-                index = data.find("\n", offset)
+            elif self._left == 0:
+                index = data.find(b"\n", offset)
                 if index == -1:
                     if length > MAXLINE:
                         raise RuntimeError("Line too long")
@@ -139,124 +126,118 @@ class HttpStream(Stream):
                 index = index + 1
                 line = data[offset:index]
                 length -= (index - offset)
+                logging.debug("found %d-bytes line", index - offset)
                 offset = index
-                self._got_line(line)
+                self._got_line(line.decode("iso-8859-1"))
 
             # robustness
             else:
                 raise RuntimeError("Left become negative")
 
-            # robustness
+            # robustness (was the connection closed by callback?)
             if self.close_complete or self.close_pending:
+                logging.debug("close() was called, stop http data processing")
                 return
-
-#           Should be debug2() not debug()
-#           logging.debug("HTTP receiver: %s -> %s",
-#                         STATES[ostate], STATES[self.state])
 
         # keep the eventual remainder for later
         if length > 0:
+            logging.debug("not all data was processed")
             remainder = data[offset:]
-            self.incoming.append(remainder)
-            logging.debug("HTTP receiver: remainder %d", len(remainder))
+            self._incoming.append(remainder)
 
         # get the next fragment
         self.start_recv()
+        logging.debug("processing incoming http data... done")
 
     def _got_line(self, line):
         ''' We've got a line... what do we do? '''
-        if self.state == FIRSTLINE:
+
+        if self._state == FIRSTLINE:
             line = line.strip()
             logging.debug("< %s", line)
             vector = line.split(None, 2)
-            if len(vector) == 3:
-                if line.startswith("HTTP"):
-                    protocol, code, reason = vector
-                    if protocol in PROTOCOLS:
-                        self.got_response_line(protocol, code, reason)
-                else:
-                    method, uri, protocol = vector
-                    if protocol in PROTOCOLS:
-                        self.got_request_line(method, uri, protocol)
-                if protocol not in PROTOCOLS:
-                    raise RuntimeError("Invalid protocol")
-                else:
-                    self.state = HEADER
-            else:
-                raise RuntimeError("Invalid first line")
-        elif self.state == HEADER:
-            if line.strip():
+            self.got_first_line(vector[0], vector[1], vector[2])
+            self._state = HEADER
+
+        elif self._state == HEADER:
+            if line[0] in (" ", "\t"):
+                raise RuntimeError("Not handling continuation headers")
+            line = line.strip()
+            if line:
                 logging.debug("< %s", line)
-                # not handling mime folding
                 index = line.find(":")
                 if index >= 0:
                     key, value = line.split(":", 1)
-                    self.got_header(key.strip(), value.strip())
+                    self.got_header(key.lower().strip(), value.strip())
                 else:
                     raise RuntimeError("Invalid header line")
             else:
                 logging.debug("<")
-                self.state, self.left = self.got_end_of_headers()
-                if self.state == ERROR:
+                self._state, self._left = self.got_end_of_headers()
+                if self._state == ERROR:
                     # allow upstream to filter out unwanted requests
                     self.close()
-                elif self.state == FIRSTLINE:
+                elif self._state == FIRSTLINE:
                     # this is the case of an empty body
                     self.got_end_of_body()
-        elif self.state == CHUNK_LENGTH:
+
+        elif self._state == CHUNK_LENGTH:
             vector = line.split()
             if vector:
                 length = int(vector[0], 16)
                 if length < 0:
                     raise RuntimeError("Negative chunk-length")
                 elif length == 0:
-                    self.state = TRAILER
+                    self._state = TRAILER
                 else:
-                    self.left = length
-                    self.state = CHUNK
+                    self._left = length
+                    self._state = CHUNK
             else:
                 raise RuntimeError("Invalid chunk-length line")
-        elif self.state == CHUNK_END:
+
+        elif self._state == CHUNK_END:
             if line.strip():
                 raise RuntimeError("Invalid chunk-end line")
             else:
-                self.state = CHUNK_LENGTH
-        elif self.state == TRAILER:
+                self._state = CHUNK_LENGTH
+
+        elif self._state == TRAILER:
             if not line.strip():
-                self.state = FIRSTLINE
+                self._state = FIRSTLINE
                 self.got_end_of_body()
             else:
                 # Ignoring trailers
                 pass
+
         else:
             raise RuntimeError("Not expecting a line")
 
     def _got_piece(self, piece):
         ''' We've got a piece... what do we do? '''
-        if self.state == BOUNDED:
+
+        if self._state == BOUNDED:
+            logging.debug("got piece of bounded body")
             self.got_piece(piece)
-            if self.left == 0:
-                self.state = FIRSTLINE
+            if self._left == 0:
+                self._state = FIRSTLINE
                 self.got_end_of_body()
-        elif self.state == UNBOUNDED:
+
+        elif self._state == UNBOUNDED:
+            logging.debug("got piece of unbounded body")
             self.got_piece(piece)
-            self.left = MAXBUF
-        elif self.state == CHUNK:
+            self._left = MAXBUF
+
+        elif self._state == CHUNK:
+            logging.debug("got piece of chunked body")
             self.got_piece(piece)
-            if self.left == 0:
-                self.state = CHUNK_END
+            if self._left == 0:
+                self._state = CHUNK_END
+
         else:
             raise RuntimeError("Not expecting a piece")
 
-    # Events for upstream
-
-    def got_request_line(self, method, uri, protocol):
+    def got_first_line(self, first, second, third):
         ''' Got the request line '''
-        raise NotImplementedError("Not expecting a request-line")
-
-    def got_response_line(self, protocol, code, reason):
-        ''' Got the response line '''
-        raise NotImplementedError("Not expecting a reponse-line")
 
     def got_header(self, key, value):
         ''' Got an header '''
