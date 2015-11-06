@@ -21,6 +21,7 @@
 
 ''' HTTP stream '''
 
+from collections import deque
 import logging
 
 from .stream import MAXBUF
@@ -55,11 +56,12 @@ SMALLMESSAGE = 8000
 class HttpStream(Stream):
     ''' HTTP stream '''
 
-    def __init__(self, poller):
-        Stream.__init__(self, poller)
+    def __init__(self, poller, parent, sock, conf):
+        Stream.__init__(self, poller, parent, sock, conf)
         self._incoming = []
         self._state = FIRSTLINE
         self._left = 0
+        self._outgoing = deque()
 
     def connection_made(self):
         logging.debug("now ready to read http messages")
@@ -83,10 +85,34 @@ class HttpStream(Stream):
             else:
                 vector.append(body)
             data = b"".join(vector)
-            self.start_send(data)
+            self._outgoing.append(data)
         else:
-            self.start_send(message.serialize_headers())
-            self.start_send(message.serialize_body())
+            logging.debug("sending ordinary http message")
+            self._outgoing.append(message.serialize_headers())
+            self._outgoing.append(message.serialize_body())
+        self._flush()
+
+    def send_complete(self):
+        logging.debug("send completed")
+        self._outgoing.popleft()
+        self._flush()
+
+    def _flush(self):
+        """ Flush outgoing queue """
+        while not self.send_pending and self._outgoing:
+            octets = self._outgoing[0]
+            if hasattr(octets, 'read'):
+                octets = octets.read()
+                if octets:
+                    self._outgoing.appendleft(octets)
+                    self.start_send(octets)
+                    logging.debug("sending data read from file")
+                    continue
+                self._outgoing.popleft()
+                continue
+            self.start_send(octets)
+            logging.debug("sending buffered data")
+            continue
 
     def recv_complete(self, data):
         logging.debug("processing incoming http data...")

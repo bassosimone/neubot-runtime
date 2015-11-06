@@ -21,6 +21,7 @@
 
 """ Shows how to use Neubot's stream """
 
+from collections import deque
 import getopt
 import logging
 import sys
@@ -35,51 +36,73 @@ from neubot_runtime.stream_handler import StreamHandler
 class EchoStream(Stream):
     """ Stream implementing the echo protocol """
 
+    def __init__(self, poller, parent, sock, conf):
+        logging.debug("echo stream")
+        Stream.__init__(self, poller, parent, sock, conf)
+        self._buffer = deque()
+
     def connection_made(self):
-        logging.debug("connection made")
+        logging.debug("starting to receive data")
         self.start_recv()
 
     def recv_complete(self, octets):
-        logging.debug("recv complete")
+        logging.debug("recv complete; buffering and receiving more")
         self.start_recv()
-        self.start_send(octets)
+        self._buffer.append(octets)
+        self._flush()
 
     def send_complete(self):
         logging.debug("send complete")
+        self._buffer.popleft()
+        self._flush()
+
+    def _flush(self):
+        """ Flush output buffer """
+        if not self.send_pending and self._buffer:
+            self.start_send(self._buffer[0])
 
 class ChargenStream(Stream):
     """ Stream implementing the chargen protocol """
 
-    def __init__(self, poller, chunk):
-        Stream.__init__(self, poller)
+    def __init__(self, poller, parent, sock, conf, chunk):
+        logging.debug("chargen stream")
+        Stream.__init__(self, poller, parent, sock, conf)
         self._buffer = b"A" * chunk
 
     def connection_made(self):
-        logging.debug("connection made")
+        logging.debug("starting to send data")
         self.start_send(self._buffer)
 
     def send_complete(self):
-        logging.debug("send complete")
+        logging.debug("send complete; sending more data")
         self.start_send(self._buffer)
 
 class DiscardStream(Stream):
     """ Stream implementing the discard protocol """
 
+    def __init__(self, poller, parent, sock, conf):
+        logging.debug("discard stream")
+        Stream.__init__(self, poller, parent, sock, conf)
+
     def connection_made(self):
-        logging.debug("connection made")
+        logging.debug("starting to receive data")
         self.start_recv()
 
     def recv_complete(self, octets):
-        logging.debug("recv complete")
+        logging.debug("recv complete; receiving more data")
         self.start_recv()
 
 class EchoHandler(StreamHandler):
     """ Handler implementing the echo protocol """
 
+    def __init__(self, poller):
+        logging.debug("echo handler")
+        StreamHandler.__init__(self, poller)
+
     def connection_made(self, sock, endpoint, rtt):
         logging.info("connection made: %s - %f", endpoint, rtt)
-        stream = EchoStream(self.poller)
-        stream.attach(self, sock, self.conf)
+        stream = EchoStream(self.poller, self, sock, self.conf)
+        stream.connection_made()
 
     def connection_lost(self, stream):
         logging.info("connection lost: %s", str(stream))
@@ -87,10 +110,14 @@ class EchoHandler(StreamHandler):
 class ChargenHandler(StreamHandler):
     """ Handler implementing the chargen protocol """
 
+    def __init__(self, poller):
+        logging.debug("chargen handler")
+        StreamHandler.__init__(self, poller)
+
     def connection_made(self, sock, endpoint, rtt):
         logging.info("connection made: %s - %f", endpoint, rtt)
-        stream = ChargenStream(self.poller, 65535)
-        stream.attach(self, sock, self.conf)
+        stream = ChargenStream(self.poller, self, sock, self.conf, 65535)
+        stream.connection_made()
 
     def connection_lost(self, stream):
         logging.info("connection lost: %s", str(stream))
@@ -98,17 +125,21 @@ class ChargenHandler(StreamHandler):
 class DiscardHandler(StreamHandler):
     """ Handler implementing the discard protocol """
 
+    def __init__(self, poller):
+        logging.debug("discard handler")
+        StreamHandler.__init__(self, poller)
+
     def connection_made(self, sock, endpoint, rtt):
         logging.info("connection made: %s - %f", endpoint, rtt)
-        stream = DiscardStream(self.poller)
-        stream.attach(self, sock, self.conf)
+        stream = DiscardStream(self.poller, self, sock, self.conf)
+        stream.connection_made()
 
     def connection_lost(self, stream):
         logging.info("connection lost: %s", str(stream))
 
 def main(args):
     """ Main function """
-    address = "127.0.0.1 ::1"
+    address = "127.0.0.1"
     handler = EchoHandler
     listen = False
     port = "54321"
@@ -136,7 +167,6 @@ def main(args):
 
     poller = Poller()
     instance = handler(poller)
-    instance.configure({})
     if not listen:
         instance.connect((address, port))
     else:

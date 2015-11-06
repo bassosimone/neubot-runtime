@@ -73,6 +73,6 @@ class HttpClient(StreamHandler):
         # If we didn't connect via connect_uri()...
         if not self.host_header:
             self.host_header = utils_net.format_epnt(endpoint)
-        stream = HttpClientStream(self.poller)
-        stream.attach(self, sock, self.conf)
+        stream = HttpClientStream(self.poller, self, sock, self.conf)
+        stream.connection_made()
         self.connection_ready(stream)

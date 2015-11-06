@@ -46,8 +46,8 @@ class HttpServerStream(HttpStream):
     ''' Specializes HttpStream to implement the server-side
         of an HTTP channel '''
 
-    def __init__(self, poller):
-        HttpStream.__init__(self, poller)
+    def __init__(self, poller, parent, socket, conf):
+        HttpStream.__init__(self, poller, parent, socket, conf)
         self.response_rewriter = lambda req, res: None
         self._request = None
 
