@@ -100,8 +100,8 @@ class HttpServer(StreamHandler):
             pass
 
     def connection_made(self, sock, endpoint, rtt):
-        stream = HttpServerStream(self.poller)
-        stream.attach(self, sock, self.conf.copy())
+        stream = HttpServerStream(self.poller, self, sock, self.conf.copy())
+        stream.connection_made()
         self.connection_ready(stream)
 
     def connection_ready(self, stream):
