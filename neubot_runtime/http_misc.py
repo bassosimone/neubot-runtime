@@ -19,7 +19,7 @@
 # along with Neubot.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-''' An HTTP message '''
+''' HTTP misc functions '''
 
 from .third_party.six import urlparse
 

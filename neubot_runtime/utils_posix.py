@@ -21,62 +21,18 @@
 
 ''' POSIX utils '''
 
-#
-# TODO Part of the POSIX code is in this file, part is in system, and part
-# is in updater/unix.py.  The mid-term plan is to move here all the POSIX
-# related code.  updater/unix.py will be changed to depend on this file.
-# (system_posix.py already pulls from this file.)
-#
-
 import errno
 import logging
 import os.path
 import pwd
 import signal
 import sys
-import syslog
 import time
 
 # For python3 portability
 MODE_755 = int('755', 8)
 MODE_644 = int('644', 8)
 MODE_022 = int('022', 8)
-
-class SyslogAdaptor(logging.Handler):
-    ''' Syslog handler that uses syslog module '''
-
-    #
-    # TODO This class is currently unused outside this module.  It is a more
-    # pythonic replacement of system_posix.py code.  It should replace it.
-    #
-
-    def __init__(self):
-        logging.Handler.__init__(self)
-        syslog.openlog('neubot', syslog.LOG_PID, syslog.LOG_DAEMON)
-
-    def emit(self, record):
-        try:
-
-            #
-            # Note: no format-string worries here since Python does 'the right
-            # thing' in Modules/syslogmodule.c:
-            #
-            # >    syslog(priority, "%s", message);
-            #
-            msg = record.msg % record.args
-            if record.levelname == 'ERORR':
-                syslog.syslog(syslog.LOG_ERR, msg)
-            elif record.levelname == 'WARNING':
-                syslog.syslog(syslog.LOG_WARNING, msg)
-            elif record.levelname == 'DEBUG':
-                syslog.syslog(syslog.LOG_DEBUG, msg)
-            else:
-                syslog.syslog(syslog.LOG_INFO, msg)
-
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            pass
 
 def is_running(pid):
     ''' Returns true if PID is running '''

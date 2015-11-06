@@ -21,9 +21,6 @@
 
 """ Internally used connector """
 
-import collections
-import logging
-
 from .pollable import Pollable
 from . import utils
 from . import utils_net
@@ -31,65 +28,37 @@ from . import utils_net
 class Connector(Pollable):
     """ Connects to the remote endpoint """
 
-    def __init__(self, poller, parent):
+    def __init__(self, poller, parent, endpoint, conf):
         Pollable.__init__(self)
-        self.conf = {}
-        self.poller = poller
-        self.parent = parent
-        self.sock = None
-        self.timestamp = 0
-        self.endpoint = None
-        self.epnts = collections.deque()
-        self.watchdog = 10
+        self._poller = poller
+        self._parent = parent
+        self._timestamp = 0
+
+        self._endpoint = endpoint
+        self._sock = utils_net.connect(endpoint, conf.get("prefer_ipv6", False))
+        if not self._sock:
+            self._parent.connection_failed(self, None)
+            return
+
+        self._timestamp = utils.ticks()
+        self._poller.set_writable(self)
+        self.set_timeout(10)
 
     def __repr__(self):
-        return "connector to %s" % str(self.endpoint)
-
-    def _connection_failed(self):
-        """ Internally called when connection fails """
-        if self.sock:
-            self.poller.unset_writable(self)
-            self.sock = None
-        if not self.epnts:
-            self.parent.connection_failed(self, None)
-            return
-        self.connect(self.epnts.popleft(), self.conf)
-
-    def connect(self, endpoint, conf):
-        """ Connect to the remote endpoint """
-
-        # Connect first address in a list
-        if ' ' in endpoint[0]:
-            logging.debug('connecting to %s', str(endpoint))
-            for address in endpoint[0].split():
-                epnt = (address.strip(), endpoint[1])
-                self.epnts.append(epnt)
-            endpoint = self.epnts.popleft()
-
-        self.endpoint = endpoint
-        self.conf = conf
-
-        sock = utils_net.connect(endpoint, conf.get("prefer_ipv6", False))
-        if not sock:
-            self._connection_failed()
-            return
-
-        self.sock = sock
-        self.timestamp = utils.ticks()
-        self.poller.set_writable(self)
+        return "connector to %s" % str(self._endpoint)
 
     def fileno(self):
-        return self.sock.fileno()
+        return self._sock.fileno()
 
     def handle_write(self):
-        self.poller.unset_writable(self)
+        self._poller.unset_writable(self)
 
-        if not utils_net.isconnected(self.endpoint, self.sock):
-            self._connection_failed()
+        if not utils_net.isconnected(self._endpoint, self._sock):
+            self._parent.connection_failed(self, None)
             return
 
-        rtt = utils.ticks() - self.timestamp
-        self.parent.connection_made(self.sock, self.endpoint, rtt)
+        rtt = utils.ticks() - self._timestamp
+        self._parent.connection_made(self._sock, self._endpoint, rtt)
 
     def handle_close(self):
-        self._connection_failed()
+        self._parent.connection_failed(self, None)
