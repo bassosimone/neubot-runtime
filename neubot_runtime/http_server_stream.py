@@ -19,7 +19,7 @@
 # along with Neubot.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-''' HTTP server '''
+''' HTTP server stream '''
 
 import time
 import logging
@@ -43,52 +43,35 @@ MONTH = [
 ]
 
 class HttpServerStream(HttpStream):
-
     ''' Specializes HttpStream to implement the server-side
         of an HTTP channel '''
 
-    def __init__(self, poller):
-        ''' Initialize '''
-        HttpStream.__init__(self, poller)
+    def __init__(self, poller, parent, socket, conf):
+        HttpStream.__init__(self, poller, parent, socket, conf)
         self.response_rewriter = lambda req, res: None
-        self.request = None
+        self._request = None
 
-    def got_request_line(self, method, uri, protocol):
-        ''' Invoked when we get a request line '''
-        self.request = HttpMessage(method=method, uri=uri, protocol=protocol)
+    def got_first_line(self, method, uri, protocol):
+        if protocol not in ("HTTP/1.0", "HTTP/1.1"):
+            raise RuntimeError
+        self._request = HttpMessage(method=method, uri=uri, protocol=protocol)
 
     def got_header(self, key, value):
-        ''' Invoked when we get an header '''
-        if self.request:
-            self.request[key] = value
-        else:
-            self.close()
+        self._request[key] = value
 
     def got_end_of_headers(self):
-        ''' Invoked at the end of headers '''
-        if self.request:
-            if not self.parent.got_request_headers(self, self.request):
-                return ERROR, 0
-            return nextstate(self.request)
-        else:
+        if not self.parent.got_request_headers(self, self._request):
             return ERROR, 0
+        return nextstate(self._request)
 
     def got_piece(self, piece):
-        ''' Invoked when we read a piece of the body '''
-        if self.request:
-            self.request.body.write(piece)
-        else:
-            self.close()
+        self.parent.got_request_body_piece(self._request, piece)
 
     def got_end_of_body(self):
-        ''' Invoked at the end of the body '''
-        if self.request:
-            utils.safe_seek(self.request.body, 0)
-            self.request.prettyprintbody("<")
-            self.parent.got_request(self, self.request)
-            self.request = None
-        else:
-            self.close()
+        utils.safe_seek(self._request.body, 0)
+        self._request.prettyprintbody("<")
+        self.parent.got_request(self, self._request)
+        self._request = None
 
     def send_response(self, request, response):
         ''' Send a response to the client '''

@@ -21,9 +21,11 @@
 
 ''' Miscellaneous utility functions '''
 
-import sys
+import logging
 import os
+import sys
 import time
+import traceback
 import uuid
 
 def safe_seek(afile, offset, whence=os.SEEK_SET):
@@ -131,3 +133,8 @@ def get_uuid():
         Each Neubot is identified by an anonymous unique random ID,
         which allows to perform time series analysis. '''
     return str(uuid.uuid4())
+
+def oops():
+    """ Print stacktrace in the current location """
+    for line in traceback.format_stack()[:-1]:
+        logging.warning(line.rstrip())

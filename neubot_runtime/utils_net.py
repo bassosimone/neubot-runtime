@@ -94,7 +94,7 @@ def addrinfo_key(ainfo):
 def listen(epnt):
     ''' Listen to all sockets represented by epnt '''
 
-    logging.debug('listen(): about to listen to: %s', str(epnt))
+    logging.debug('try listen %s', str(epnt))
 
     sockets = []
 
@@ -102,33 +102,22 @@ def listen(epnt):
     if not epnt[0]:
         epnt = (None, epnt[1])
 
-    # Allow to listen on a list of addresses
-    if epnt[0] and ' ' in epnt[0]:
-        for address in epnt[0].split():
-            result = listen((address.strip(), epnt[1]))
-            sockets.extend(result)
-        return sockets
-
     try:
         addrinfo = socket.getaddrinfo(epnt[0], epnt[1], socket.AF_UNSPEC,
                                       socket.SOCK_STREAM, 0, socket.AI_PASSIVE)
     except socket.error:
-        logging.error('listen(): cannot listen to %s',
-                      format_epnt(epnt), exc_info=1)
+        logging.error('getaddrinfo failed', exc_info=1)
         return sockets
 
-    message = ['listen(): getaddrinfo() returned: [']
+    logging.debug("getaddrinfo returned:")
     for ainfo in addrinfo:
-        message.append(format_ainfo(ainfo))
-        message.append(', ')
-    message[-1] = ']'
-    logging.debug(''.join(message))
+        logging.debug("    - %s", format_ainfo(ainfo))
 
     addrinfo.sort(key=addrinfo_key, reverse=True)
 
     for ainfo in addrinfo:
         try:
-            logging.debug('listen(): trying with: %s', format_ainfo(ainfo))
+            logging.debug('try %s', format_ainfo(ainfo))
 
             sock = socket.socket(ainfo[0], socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -142,47 +131,40 @@ def listen(epnt):
             # Probably the backlog here is too big
             sock.listen(128)
 
-            logging.debug('listen(): listening at: %s', format_epnt(ainfo[4]))
+            logging.debug('listen... ok')
             sockets.append(sock)
 
         except socket.error:
-            logging.warning('listen(): cannot listen to %s',
-                            format_epnt(ainfo[4]), exc_info=1)
+            logging.warning('listen... error', exc_info=1)
         except:
-            logging.warning('listen(): cannot listen to %s',
-                            format_epnt(ainfo[4]), exc_info=1)
+            logging.warning('listen... error', exc_info=1)
 
     if not sockets:
-        logging.error('listen(): cannot listen to %s: %s',
-                      format_epnt(epnt), 'all attempts failed')
+        logging.error('all listen attempts failed')
 
     return sockets
 
 def connect(epnt, prefer_ipv6):
     ''' Connect to epnt '''
 
-    logging.debug('connect(): about to connect to: %s', str(epnt))
+    logging.debug('try connect to %s', str(epnt))
 
     try:
         addrinfo = socket.getaddrinfo(epnt[0], epnt[1], socket.AF_UNSPEC,
                                       socket.SOCK_STREAM)
     except socket.error:
-        logging.error('connect(): cannot connect to %s',
-                      format_epnt(epnt), exc_info=1)
+        logging.error('getaddrinfo failed', exc_info=1)
         return None
 
-    message = ['connect(): getaddrinfo() returned: [']
+    logging.debug('getaddrinfo returned:')
     for ainfo in addrinfo:
-        message.append(format_ainfo(ainfo))
-        message.append(', ')
-    message[-1] = ']'
-    logging.debug(''.join(message))
+        logging.debug("    - %s", format_ainfo(ainfo))
 
     addrinfo.sort(key=addrinfo_key, reverse=prefer_ipv6)
 
     for ainfo in addrinfo:
         try:
-            logging.debug('connect(): trying with: %s', format_ainfo(ainfo))
+            logging.debug('try %s', format_ainfo(ainfo))
 
             sock = socket.socket(ainfo[0], socket.SOCK_STREAM)
             sock.setblocking(False)
@@ -190,19 +172,15 @@ def connect(epnt, prefer_ipv6):
             if result not in INPROGRESS:
                 raise socket.error(result, os.strerror(result))
 
-            logging.debug('connect(): connection to %s in progress...',
-                          format_epnt(ainfo[4]))
+            logging.debug('connect... in progress')
             return sock
 
         except socket.error:
-            logging.warning('connect(): cannot connect to %s',
-                            format_epnt(ainfo[4]), exc_info=1)
+            logging.warning('connect... error', exc_info=1)
         except:
-            logging.warning('connect(): cannot connect to %s',
-                            format_epnt(ainfo[4]), exc_info=1)
+            logging.warning('connect... error', exc_info=1)
 
-    logging.error('connect(): cannot connect to %s: %s',
-                  format_epnt(epnt), 'all attempts failed')
+    logging.error('all connect attempts failed')
     return None
 
 def isconnected(endpoint, sock):
@@ -210,31 +188,29 @@ def isconnected(endpoint, sock):
 
     # See http://cr.yp.to/docs/connect.html
 
-    logging.debug('isconnected(): checking whether connect() to %s succeeded',
-                  format_epnt(endpoint))
+    logging.debug('are we connected to %s?', format_epnt(endpoint))
 
     exception, peername = None, None
     try:
         peername = getpeername(sock)
-    except socket.error:
-        exception = sys.exc_info()[1]
+    except socket.error as err:
+        exception = err
 
     if not exception:
-        logging.debug('isconnected(): connect() to %s succeeded', (
-            format_epnt(peername)))
+        logging.debug('yes, we are connected')
         return peername
 
     # MacOSX getpeername() fails with EINVAL
     if exception.args[0] not in (errno.ENOTCONN, errno.EINVAL):
-        logging.error('isconnected(): connect() to %s failed',
-                      format_epnt(endpoint), exc_info=1)
+        logging.error('connect failed (reason: %s)',
+                      str(exception.args[0]))
         return None
 
     try:
         sock.recv(1024)
-    except socket.error:
-        logging.error('isconnected(): connect() to %s failed',
-                      format_epnt(endpoint), exc_info=1)
+    except socket.error as err:
+        logging.error('connect failed (reason: %s)',
+                      str(err.args[1]))
         return None
 
     raise RuntimeError('isconnected(): internal error')

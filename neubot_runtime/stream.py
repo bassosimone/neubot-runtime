@@ -21,37 +21,34 @@
 
 """ Stream abstraction """
 
-import collections
+import errno
 import logging
+import socket
 
 from .pollable import Pollable
-from .pollable import SUCCESS
-from .pollable import WANT_READ
-from .pollable import WANT_WRITE
-from .pollable import CONNRST
-from .async_socket import AsyncSocket
-
 from .third_party import six
-
 from . import utils_net
 
 # Maximum amount of bytes we read from a socket
 MAXBUF = 1 << 18
 
+# Soft errors on sockets, i.e. we can retry later
+SOFT_ERRORS = (errno.EAGAIN, errno.EWOULDBLOCK, errno.EINTR)
+
 class Stream(Pollable):
     """ Stream class """
 
-    def __init__(self, poller):
+    def __init__(self, poller, parent, sock, conf):
         Pollable.__init__(self)
         self.poller = poller
-        self.parent = None
-        self.conf = None
+        self.parent = parent
+        self.conf = sock
 
-        self.sock = None
-        self.filenum = -1
-        self.myname = None
-        self.peername = None
-        self.logname = None
+        self.sock = sock
+        self.filenum = sock.fileno()
+        self.myname = utils_net.getsockname(sock)
+        self.peername = utils_net.getpeername(sock)
+        self.logname = str((self.myname, self.peername))
         self.eof = False
         self.rst = False
 
@@ -59,7 +56,6 @@ class Stream(Pollable):
         self.close_pending = False
         self.recv_pending = False
         self.send_octets = None
-        self.send_queue = collections.deque()
         self.send_pending = False
 
         self.bytes_recv_tot = 0
@@ -73,23 +69,6 @@ class Stream(Pollable):
 
     def fileno(self):
         return self.filenum
-
-    def attach(self, parent, sock, conf):
-        """ Attach stream to parent, socket and conf """
-
-        self.parent = parent
-        self.conf = conf
-
-        self.filenum = sock.fileno()
-        self.myname = utils_net.getsockname(sock)
-        self.peername = utils_net.getpeername(sock)
-        self.logname = str((self.myname, self.peername))
-
-        logging.debug("* Connection made %s", str(self.logname))
-
-        self.sock = AsyncSocket(sock)
-
-        self.connection_made()
 
     def connection_made(self):
         """ Called when the connection is made """
@@ -105,167 +84,135 @@ class Stream(Pollable):
         if func in self.atclosev:
             self.atclosev.remove(func)
 
-    # Close path
-
     def connection_lost(self, exception):
         """ Called when the connection is lost """
 
     def close(self):
         """ Close this stream """
         self.close_pending = True
+        logging.debug("called close()")
         if self.send_pending or self.close_complete:
+            if self.send_pending:
+                logging.debug("wait for send to complete before closing")
             return
         self.poller.close(self)
 
     def handle_close(self):
         if self.close_complete:
             return
-
         self.close_complete = True
+        logging.debug("stream close... complete")
 
         self.connection_lost(None)
         self.parent.connection_lost(self)
+        self.send_octets = None
 
-        atclosev, self.atclosev = self.atclosev, set()
-        for func in atclosev:
+        for func in self.atclosev:
             try:
                 func(self, None)
             except (KeyboardInterrupt, SystemExit):
                 raise
             except:
-                logging.error("Error in atclosev", exc_info=1)
+                logging.error("close callback failed", exc_info=1)
+        self.atclosev.clear()
 
-        self.send_octets = None
-        self.sock.soclose()
-
-    # Recv path
+        try:
+            self.sock.close()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            logging.error("cannot close socket", exc_info=1)
 
     def start_recv(self):
         """ Start async recv operation """
-        if (self.close_complete or self.close_pending
-                or self.recv_pending):
+        if self.close_complete or self.close_pending:
             return
-
+        if self.recv_pending:
+            raise RuntimeError("recv already pending")
         self.recv_pending = True
         self.poller.set_readable(self)
 
     def handle_read(self):
-        status, octets = self.sock.sorecv(MAXBUF)
-
-        if status == SUCCESS and octets:
-
-            self.bytes_recv_tot += len(octets)
-            self.recv_pending = False
-            self.poller.unset_readable(self)
-
-            self.recv_complete(octets)
-            return
-
-        if status == WANT_READ:
-            return
-
-        if status == CONNRST and not octets:
-            self.rst = True
-            self.poller.close(self)
-            return
-
-        if status == SUCCESS and not octets:
+        try:
+            octets = self.sock.recv(MAXBUF)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except socket.error as error:
+            if error.args[0] in SOFT_ERRORS:
+                return
+            if error.args[0] == errno.ECONNRESET:
+                logging.debug("received RST (reading)")
+                self.rst = True
+                self.poller.close(self)
+                return
+            raise
+        except:
+            raise
+        else:
+            if octets:
+                logging.debug("received %d bytes", len(octets))
+                self.bytes_recv_tot += len(octets)
+                self.recv_pending = False
+                self.poller.unset_readable(self)
+                self.recv_complete(octets)
+                return
+            logging.debug("received EOF (reading)")
             self.eof = True
             self.poller.close(self)
-            return
-
-        raise RuntimeError("Unexpected status value")
 
     def recv_complete(self, octets):
         """ Called when recv is complete """
-
-    # Send path
-
-    def read_send_queue(self):
-        """ Reads send queue """
-        octets = ""
-
-        while self.send_queue:
-            octets = self.send_queue[0]
-            if not hasattr(octets, 'read'):
-                # remove the piece in any case
-                self.send_queue.popleft()
-                if octets:
-                    break
-            else:
-                octets = octets.read(MAXBUF)
-                if octets:
-                    break
-                # remove the file-like when it is empty
-                self.send_queue.popleft()
-
-        if octets:
-            if octets.__class__ == six.u("").__class__:
-                logging.warning("Received unicode input")
-                octets = octets.encode("utf-8")
-
-        return octets
 
     def start_send(self, octets):
         """ Starts async send operation """
         if self.close_complete or self.close_pending:
             return
-
-        self.send_queue.append(octets)
         if self.send_pending:
-            return
-
-        self.send_octets = self.read_send_queue()
-        if not self.send_octets:
-            return
-
+            raise RuntimeError("send already pending")
+        self.send_octets = octets
         self.send_pending = True
         self.poller.set_writable(self)
 
     def handle_write(self):
-        status, count = self.sock.sosend(self.send_octets)
-
-        if status == SUCCESS and count > 0:
-            self.bytes_sent_tot += count
-
-            if count == len(self.send_octets):
-
-                self.send_octets = self.read_send_queue()
-                if self.send_octets:
+        try:
+            count = self.sock.send(self.send_octets)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except socket.error as error:
+            if error.args[0] in SOFT_ERRORS:
+                return
+            if error.args[0] == errno.ECONNRESET:
+                logging.debug("received RST (writing)")
+                self.rst = True
+                self.poller.close(self)
+                return
+            raise
+        except:
+            raise
+        else:
+            if count > 0:
+                logging.debug("sent %d bytes", count)
+                self.bytes_sent_tot += count
+                if count == len(self.send_octets):
+                    self.send_pending = False
+                    self.poller.unset_writable(self)
+                    if not self.close_pending:
+                        self.send_complete()
+                    else:
+                        logging.debug("resuming close procedure")
+                        self.poller.close(self)
                     return
-
-                self.send_pending = False
-                self.poller.unset_writable(self)
-
+                if count < len(self.send_octets):
+                    self.send_octets = six.buff(self.send_octets, count)
+                    return
+                raise RuntimeError("Sent more than expected")
+            if count == len(self.send_octets) == 0:
                 self.send_complete()
-                if self.close_pending:
-                    self.poller.close(self)
                 return
-
-            if count < len(self.send_octets):
-                self.send_octets = six.buff(self.send_octets, count)
-                self.poller.set_writable(self)
-                return
-
-            raise RuntimeError("Sent more than expected")
-
-        if status == WANT_WRITE:
-            return
-
-        if status == CONNRST and count == 0:
-            self.rst = True
-            self.poller.close(self)
-            return
-
-        if status == SUCCESS and count == 0:
+            # Could the following happen?
+            logging.debug("received EOF (writing)")
             self.eof = True
             self.poller.close(self)
-            return
-
-        if status == SUCCESS and count < 0:
-            raise RuntimeError("Unexpected count value")
-
-        raise RuntimeError("Unexpected status value")
 
     def send_complete(self):
         """ Called when send is complete """

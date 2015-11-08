@@ -21,6 +21,8 @@
 
 """ Internally used listener """
 
+import logging
+
 from .pollable import Pollable
 
 class Listener(Pollable):
@@ -32,27 +34,22 @@ class Listener(Pollable):
         self._parent = parent
         self._sock = sock
         self._endpoint = endpoint
-
-        # Want to listen "forever"
-        self.set_timeout(-1)
+        self.set_timeout(-1)  # want to listen "forever"
+        self._poller.set_readable(self)
+        self._parent.started_listening(self)
 
     def __repr__(self):
         return "listener at %s" % str(self._endpoint)
 
-    def listen(self):
-        """ Actually start listening """
-        self._poller.set_readable(self)
-        self._parent.started_listening(self)
-
     def fileno(self):
         return self._sock.fileno()
 
-    #
-    # Catch all types of exception because an error in
-    # connection_made() MUST NOT cause the server to stop
-    # listening for new connections.
-    #
     def handle_read(self):
+        #
+        # Catch all types of exception because an error in
+        # connection_made() MUST NOT cause the server to stop
+        # listening for new connections.
+        #
         try:
             sock = self._sock.accept()[0]
             sock.setblocking(False)
@@ -60,8 +57,8 @@ class Listener(Pollable):
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as exception:
+            logging.error("accept failed", exc_info=1)
             self._parent.accept_failed(self, exception)
-            return
 
     def handle_close(self):
         self._parent.bind_failed(self._endpoint)  # XXX

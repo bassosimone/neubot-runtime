@@ -30,41 +30,27 @@ from .stream_handler import StreamHandler
 from .poller import POLLER
 
 class HttpServer(StreamHandler):
-
-    ''' Manages many HTTP connections '''
+    ''' Manages many HTTP server connections '''
 
     def __init__(self, poller):
-        ''' Initialize the HTTP server '''
         StreamHandler.__init__(self, poller)
-        self._ssl_ports = set()
-        self.childs = {}
-
-    def bind_failed(self, epnt):
-        ''' Invoked when we cannot bind a socket '''
-        if self.conf.get("http.server.bind_or_die", False):
-            sys.exit(1)
+        self._childs = {}
 
     def register_child(self, child, prefix):
         ''' Register a child server object '''
-        self.childs[prefix] = child
-        child.child = self
-
-    def register_ssl_port(self, port):
-        ''' Register a port where we should speak SSL '''
-        self._ssl_ports.add(port)
+        self._childs[prefix] = child
 
     def got_request_headers(self, stream, request):
         ''' Invoked when we got request headers '''
-        if self.childs:
-            for prefix, child in self.childs.items():
-                if request.uri.startswith(prefix):
-                    try:
-                        return child.got_request_headers(stream, request)
-                    except (KeyboardInterrupt, SystemExit):
-                        raise
-                    except:
-                        self._on_internal_error(stream, request)
-                        return False
+        for prefix, child in self._childs.items():
+            if request.uri.startswith(prefix):
+                try:
+                    return child.got_request_headers(stream, request)
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except:
+                    self._on_internal_error(stream, request)
+                    return False
         return True
 
     def process_request(self, stream, request):
@@ -77,7 +63,7 @@ class HttpServer(StreamHandler):
             stream.send_response(request, response)
             return
 
-        for prefix, child in self.childs.items():
+        for prefix, child in self._childs.items():
             if request.uri.startswith(prefix):
                 child.process_request(stream, request)
                 return
@@ -95,27 +81,33 @@ class HttpServer(StreamHandler):
         except:
             self._on_internal_error(stream, request)
 
+    def got_request_body_piece(self, request, piece):
+        """ Got piece of request body """
+
     @staticmethod
     def _on_internal_error(stream, request):
         ''' Generate 500 Internal Server Error page '''
-        logging.error('Internal error while serving response', exc_info=1)
-        response = HttpMessage()
-        response.compose(code="500", reason="Internal Server Error",
-                         body="500 Internal Server Error", keepalive=0)
-        stream.send_response(request, response)
-        stream.close()
+        try:
+            logging.error('Internal error while serving response', exc_info=1)
+            response = HttpMessage()
+            response.compose(code="500", reason="Internal Server Error",
+                             body="500 Internal Server Error", keepalive=0)
+            stream.send_response(request, response)
+            stream.close()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            pass
 
     def connection_made(self, sock, endpoint, rtt):
-        ''' Invoked when the connection is made '''
-        stream = HttpServerStream(self.poller)
-        stream.attach(self, sock, self.conf.copy())
+        stream = HttpServerStream(self.poller, self, sock, self.conf.copy())
+        stream.connection_made()
         self.connection_ready(stream)
 
     def connection_ready(self, stream):
         ''' Invoked when the connection is ready '''
 
-    def accept_failed(self, listener, exception):
-        ''' Print a warning if accept() fails (often due to SSL) '''
+    def accept_failed(self, _, exception):
         logging.warning("HttpServer: accept() failed: %s", str(exception))
 
 HTTP_SERVER = HttpServer(POLLER)
