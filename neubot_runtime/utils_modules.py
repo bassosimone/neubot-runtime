@@ -81,4 +81,4 @@ def modprobe(rootdir, filt, context, message):
                             name, exc_info=1)
             continue
 
-        logging.debug("utils_modules: load '%s' context '%s'", name, context)
+        logging.info("Loaded module '%s' for '%s' context", name, context)
