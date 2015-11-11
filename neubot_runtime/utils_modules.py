@@ -51,7 +51,7 @@ def modprobe(rootdir, filt, context, message):
             logging.debug("utils_modules: skip '%s' (filt: %s)", name, filt)
             continue
 
-        modname = "%s.neubot_module" % name
+        modname = "neubot.%s.neubot_module" % name
 
         try:
             __import__(modname)
