@@ -21,15 +21,18 @@
 
 ''' Showing how to use http client '''
 
-from neubot_runtime.third_party import six
-from neubot_runtime.http_client import HttpClient
-from neubot_runtime.http_message import HttpMessage
-from neubot_runtime.poller import Poller
-
 import getopt
 import logging
 import os
 import sys
+
+if __name__ == "__main__":
+    sys.path.insert(0, ".")
+
+from neubot_runtime.third_party import six
+from neubot_runtime.http_client import HttpClient
+from neubot_runtime.http_message import HttpMessage
+from neubot_runtime.poller import Poller
 
 class ExampleHttpClient(HttpClient):
     ''' Example HTTP client '''
