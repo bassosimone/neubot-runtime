@@ -59,7 +59,7 @@ class ExampleHttpClient(HttpClient):
             if os.path.exists(fpath):
                 logging.error("* Local file already exists: %s", fpath)
                 sys.exit(1)
-            response.body = open(fpath, "wb")
+            response.body = open(fpath, "w")
         else:
             response.body = sys.stdout
 
