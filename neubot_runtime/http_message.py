@@ -27,7 +27,7 @@ import socket
 import os
 import logging
 
-from .third_party.six import StringIO
+from .third_party.six import BytesIO
 from .third_party.six import PY3
 from . import http_misc
 from . import utils
@@ -45,7 +45,6 @@ REDIRECT = '''\
 '''
 
 class HttpMessage(object):
-
     ''' Represents an HTTP message '''
 
     def __init__(self, method="", uri="", code="", reason="", protocol=""):
@@ -64,7 +63,7 @@ class HttpMessage(object):
         self.requestline = " ".join((method, uri, protocol))
 
         self.headers = collections.defaultdict(str)
-        self.body = StringIO("")
+        self.body = BytesIO(b"")
 
         self.family = socket.AF_UNSPEC
         self.response = None
@@ -120,7 +119,7 @@ class HttpMessage(object):
         string = "".join(vector)
         if PY3:
             string = string.encode("iso-8859-1")
-        return StringIO(string)
+        return BytesIO(string)
 
     def serialize_body(self):
         ''' Serialize message body '''
@@ -183,7 +182,7 @@ class HttpMessage(object):
                 #
                 self["host"] = kwargs.get("host", "")
                 if not self["host"]:
-                    logging.warning("Missing host header")
+                    raise RuntimeError('missing host header')
 
         self.code = kwargs.get("code", "")
         self.reason = kwargs.get("reason", "")
@@ -204,13 +203,14 @@ class HttpMessage(object):
         # Curl(1) does not enter into up_to_eof mode unless a
         # content-type is specified, for this reason I've added
         # an OOPS below.
+        #
         # TODO Looking again at RFC2616 after adding this bits
         # realized that another patch is due to make the code
         # that deals with body and length better.
         #
         if kwargs.get("up_to_eof", False):
             if not "mimetype" in kwargs:
-                logging.warning("up_to_eof without mimetype")
+                raise RuntimeError("up_to_eof without mimetype")
             self["content-type"] = kwargs.get("mimetype",
                                               "text/plain")
 
@@ -235,6 +235,12 @@ class HttpMessage(object):
 
         else:
             self["content-length"] = "0"
+
+        # make sure we catch unicode doofus early...
+        if hasattr(self.body, 'mode') and self.body.mode != 'rb':
+            raise RuntimeError('body is not opened in binary mode')
+        elif PY3 and isinstance(self.body, str):
+            raise RuntimeError('body is a string with encoding')
 
         self.family = kwargs.get("family", socket.AF_INET)
 

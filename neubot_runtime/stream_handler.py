@@ -43,8 +43,7 @@ class StreamHandler(object):
             self.bind_failed(endpoint)
             return
         for sock in sockets:
-            listener = Listener(self.poller, self, sock, endpoint)
-            listener.listen()
+            Listener(self.poller, self, sock, endpoint)
 
     def bind_failed(self, epnt):
         """ Called when bind() failed """
@@ -59,8 +58,7 @@ class StreamHandler(object):
         """ Connect to the remote endpoint """
         if count != 1:
             raise NotImplementedError
-        connector = Connector(self.poller, self)
-        connector.connect(endpoint, self.conf)
+        Connector(self.poller, self, endpoint, self.conf)
 
     def connection_failed(self, connector, exception):
         """ Called when a connect attempt failed """
