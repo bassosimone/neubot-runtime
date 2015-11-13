@@ -20,7 +20,7 @@ from .http_states import CHUNK_LENGTH
 from .http_states import TRAILER
 from .http_states import ERROR
 
-from .third_party import six
+from . import compat23
 
 # Maximum allowed line length
 MAXLINE = 1 << 15
@@ -118,7 +118,7 @@ class HttpStream(Stream):
                 logging.debug("looking for %d more bytes", self._left)
                 count = min(self._left, length)
                 logging.debug("capping bytes to %d", count)
-                piece = six.buff(data, offset, count)
+                piece = compat23.buff(data, offset, count)
                 logging.debug("found %d-bytes piece", len(piece))
                 self._left -= count
                 offset += count

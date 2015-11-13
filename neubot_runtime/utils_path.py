@@ -9,6 +9,8 @@ import logging
 import os
 
 from .third_party import six
+from .third_party.six.moves.urllib import parse as urlparse
+
 
 def depth_visit(prefix, components, visit):
     ''' Visit the subtree prefix/components[0]/components[1]... '''
@@ -106,7 +108,7 @@ def append(rootdir, path, unquote_path):
         return
 
     if unquote_path:
-        path = six.urlparse.unquote(path)
+        path = urlparse.unquote(path)
         logging.debug("utils_path: unquote(path): %s", path)
 
     #
