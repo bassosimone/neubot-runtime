@@ -12,7 +12,7 @@ from .http_server_stream import HttpServerStream
 from .stream_handler import StreamHandler
 from .poller import POLLER
 
-class HttpServer(StreamHandler):
+class HttpServerBase(StreamHandler):
     ''' Manages many HTTP server connections '''
 
     def __init__(self, poller):
@@ -92,5 +92,10 @@ class HttpServer(StreamHandler):
 
     def accept_failed(self, _, exception):
         logging.warning("HttpServer: accept() failed: %s", str(exception))
+
+class HttpServer(HttpServerBase):
+
+    def got_request_body_piece(self, request, piece):
+        request.body.write(piece)
 
 HTTP_SERVER = HttpServer(POLLER)
