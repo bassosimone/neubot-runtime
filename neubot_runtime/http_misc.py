@@ -4,7 +4,7 @@
 
 ''' HTTP misc functions '''
 
-from .third_party.six import urlparse
+from .third_party.six.moves.urllib import parse as urlparse
 
 from .http_states import BOUNDED
 from .http_states import UNBOUNDED

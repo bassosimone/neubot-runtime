@@ -9,7 +9,7 @@ import logging
 import socket
 
 from .pollable import Pollable
-from .third_party import six
+from . import compat23
 from . import utils_net
 
 # Maximum amount of bytes we read from a socket
@@ -186,7 +186,7 @@ class Stream(Pollable):
                         self.poller.close(self)
                     return
                 if count < len(self.send_octets):
-                    self.send_octets = six.buff(self.send_octets, count)
+                    self.send_octets = compat23.buff(self.send_octets, count)
                     return
                 raise RuntimeError("Sent more than expected")
             if count == len(self.send_octets) == 0:
