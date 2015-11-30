@@ -107,7 +107,7 @@ class TestDepthVisit(unittest.TestCase):
 
         components = ['bar', 'baz', 'barbar', 'bazbaz']
         utils_path.depth_visit('/foo', components, on_visit_called)
-        self.assertEquals(visit_order, expected)
+        self.assertEqual(visit_order, expected)
 
     def test__7(self):
         ''' Make sure that depth_visit() correctly flags the leaf node '''
@@ -138,7 +138,7 @@ class TestPossiblyDecode(unittest.TestCase):
     def test_nonascii_bytes(self):
         ''' Test possibly_decode() with unicode bytes input '''
         self.assertEqual(
-            utils_path.possibly_decode('cio\xc3\xa8', 'utf-8'),
+            utils_path.possibly_decode(six.b('cio\xc3\xa8'), 'utf-8'),
             six.u("cio\xe8")
         )
 
