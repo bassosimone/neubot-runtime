@@ -68,11 +68,6 @@ class ServeFilesystem(HttpServer):
             utils.safe_seek(filep, 0, os.SEEK_END)
         stream.send_response(request, response)
 
-    def got_request_body_piece(self, request, body):
-        if six.PY3:
-            body = str(body, "iso-8859-1")
-        request.body.write(body)
-
 def main(args):
     ''' main() function of this module '''
     rootdir = "."

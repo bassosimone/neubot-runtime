@@ -9,6 +9,7 @@ import logging
 from .stream_handler import StreamHandler
 from .http_client_stream import HttpClientStream
 from .http_message import HttpMessage
+from .third_party import six
 from . import utils
 from . import utils_net
 
@@ -62,5 +63,5 @@ class HttpClientBase(StreamHandler):
 
 class HttpClient(HttpClientBase):
 
-	def got_response_body_piece(self, response, piece):
-		response.body.write(piece)
+    def got_response_body_piece(self, response, piece):
+        response.body.write(piece)

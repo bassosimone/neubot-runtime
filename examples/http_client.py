@@ -45,16 +45,14 @@ class ExampleHttpClient(HttpClient):
             if os.path.exists(fpath):
                 logging.error("* Local file already exists: %s", fpath)
                 sys.exit(1)
-            response.body = open(fpath, "w")
+            response.body = open(fpath, "wb")
         else:
-            response.body = sys.stdout
+            if six.PY3:
+                response.body = sys.stdout.buffer
+            else:
+                response.body = sys.stdout
 
         stream.send_request(request, response)
-
-    def got_response_body_piece(self, response, body):
-        if six.PY3:
-            body = str(body, "iso-8859-1")
-        response.body.write(body)
 
 def main(args):
     ''' main() of this module '''
