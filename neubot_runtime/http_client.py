@@ -9,10 +9,11 @@ import logging
 from .stream_handler import StreamHandler
 from .http_client_stream import HttpClientStream
 from .http_message import HttpMessage
+from .third_party import six
 from . import utils
 from . import utils_net
 
-class HttpClient(StreamHandler):
+class HttpClientBase(StreamHandler):
     ''' Manages one or more HTTP client streams '''
 
     def __init__(self, poller):
@@ -59,3 +60,8 @@ class HttpClient(StreamHandler):
         stream = HttpClientStream(self.poller, self, sock, self.conf)
         stream.connection_made()
         self.connection_ready(stream)
+
+class HttpClient(HttpClientBase):
+
+    def got_response_body_piece(self, response, piece):
+        response.body.write(piece)
