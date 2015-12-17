@@ -5,9 +5,7 @@ python:
   - "3.4"
   - "3.5"
 install:
-  - if [ $TRAVIS_PYTHON_VERSION != 2.6 ]; then
-        pip install coveralls;
-    fi
+  - pip install coveralls
 script:
   # "unittest discover" is not implemented by Python 2.6, so we initially
   # decided to use unittest2. However, when running tests through unittest2 we
