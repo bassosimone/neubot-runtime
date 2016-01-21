@@ -58,8 +58,12 @@ class HttpClientBase(StreamHandler):
         if not self.host_header:
             self.host_header = utils_net.format_epnt(endpoint)
         stream = HttpClientStream(self.poller, self, sock, self.conf)
-        stream.connection_made()
-        self.connection_ready(stream)
+
+        def kickoff_http_connection():
+            stream.connection_made()
+            self.connection_ready(stream)
+
+        self.poller.call_soon(kickoff_http_connection)
 
 class HttpClient(HttpClientBase):
 
