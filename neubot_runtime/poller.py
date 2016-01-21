@@ -56,6 +56,8 @@ class Poller(sched.scheduler):
         ''' Safely run task '''
         #logging.debug('poller: run_task: %s, %s', func, args)
         try:
+            sys.stderr.write("\n\n# EVENT: calling func %s\n\n" % str(func).replace("<", "&lt;").replace(">", "&gt;"))
+            sys.setprofile(PROFILER.notify_event)
             if args:
                 func(args)
             else:
@@ -113,7 +115,7 @@ class Poller(sched.scheduler):
         if fileno in self._readset:
             stream = self._readset[fileno]
             try:
-                sys.stderr.write("\n\n%d is readable:\n" % fileno)
+                sys.stderr.write("\n\n# EVENT: %d is readable\n\n" % fileno)
                 sys.setprofile(PROFILER.notify_event)
                 stream.handle_read()
             except (KeyboardInterrupt, SystemExit):
@@ -127,7 +129,7 @@ class Poller(sched.scheduler):
         if fileno in self._writeset:
             stream = self._writeset[fileno]
             try:
-                sys.stderr.write("\n\n%d is writable:\n" % fileno)
+                sys.stderr.write("\n\n# EVENT: %d is writable\n\n" % fileno)
                 sys.setprofile(PROFILER.notify_event)
                 stream.handle_write()
             except (KeyboardInterrupt, SystemExit):
@@ -180,7 +182,6 @@ class Poller(sched.scheduler):
             # No error?  Fire readable and writable events
             for fileno in res[0]:
                 self._call_handle_read(fileno)
-
             for fileno in res[1]:
                 self._call_handle_write(fileno)
 
