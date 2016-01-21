@@ -35,7 +35,7 @@ class Profiler(object):
             name = frame.f_globals["__file__"]
             if not name:
                 # XXX this is quite unexpected
-                name = "???"
+                name = "N/A"
 
             if name.endswith(".pyc") or name.endswith(".pyo"):
                 name = name[:-1]
@@ -69,7 +69,7 @@ class Profiler(object):
             fname = self._getfilename(frame)
             func = frame.f_code.co_name
 
-            if not fname.startswith("./neubot"):
+            if fname.startswith("/"):
                 return
 
             if event == "return":
