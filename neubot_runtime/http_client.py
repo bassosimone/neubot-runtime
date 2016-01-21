@@ -19,7 +19,7 @@ class HttpClientBase(StreamHandler):
     def __init__(self, poller):
         StreamHandler.__init__(self, poller)
         self.host_header = ""
-        self.rtt = 0
+        self.rtt = 0.0
 
     def connect_uri(self, uri, count=1):
         ''' Connects to the given URI '''
