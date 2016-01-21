@@ -114,7 +114,7 @@ def listen(epnt):
             # Probably the backlog here is too big
             sock.listen(128)
 
-            logging.debug('listen... ok')
+            logging.debug('listen... ok (fileno %d)', sock.fileno())
             sockets.append(sock)
 
         except socket.error:
@@ -155,7 +155,7 @@ def connect(epnt, prefer_ipv6):
             if result not in INPROGRESS:
                 raise socket.error(result, os.strerror(result))
 
-            logging.debug('connect... in progress')
+            logging.debug('connect... in progress (fileno %d)', sock.fileno())
             return sock
 
         except socket.error:
