@@ -77,8 +77,13 @@ def main(args):
 
     logging.basicConfig(format="%(message)s", level=noisy)
     poller = Poller()
-    client = ExampleHttpClient(poller, method, uri, use_stdout)
-    client.connect_uri(uri)
+
+    def initialize():
+        ''' Function called to start connecting '''
+        client = ExampleHttpClient(poller, method, uri, use_stdout)
+        client.connect_uri(uri)
+
+    poller.call_soon(initialize)
     poller.loop()
 
 if __name__ == "__main__":

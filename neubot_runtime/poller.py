@@ -41,6 +41,10 @@ class Poller(sched.scheduler):
         self._writeset = {}
         self._check_timeout()
 
+    def call_soon(self, func):
+        ''' Schedule a function to be called immediately '''
+        self.sched(0.0, func)
+
     def sched(self, delta, func, *args):
         ''' Schedule task '''
         #logging.debug('poller: sched: %s, %s, %s', delta, func, args)
