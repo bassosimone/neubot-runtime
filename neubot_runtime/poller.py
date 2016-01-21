@@ -56,7 +56,7 @@ class Poller(sched.scheduler):
         ''' Safely run task '''
         #logging.debug('poller: run_task: %s, %s', func, args)
         try:
-            sys.stderr.write("\n\n# EVENT: calling func %s\n\n" % str(func).replace("<", "&lt;").replace(">", "&gt;"))
+            sys.stderr.write("\n\n# EVENT: calling func `%s`\n\n" % str(func).replace("<", "&lt;").replace(">", "&gt;"))
             sys.setprofile(PROFILER.notify_event)
             if args:
                 func(args)
