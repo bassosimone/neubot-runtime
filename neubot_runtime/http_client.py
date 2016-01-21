@@ -10,6 +10,7 @@ from .stream_handler import StreamHandler
 from .http_client_stream import HttpClientStream
 from .http_message import HttpMessage
 from .third_party import six
+from . import http_misc
 from . import utils
 from . import utils_net
 
@@ -24,10 +25,8 @@ class HttpClientBase(StreamHandler):
     def connect_uri(self, uri, count=1):
         ''' Connects to the given URI '''
         try:
-            # Use message to parse the URI to get the endpoint...
-            message = HttpMessage()
-            message.compose(method="GET", uri=uri)
-            endpoint = (message.address, int(message.port))
+            _, address, port, _ = http_misc.urlsplit(uri)
+            endpoint = (address, int(port))
             self.host_header = utils_net.format_epnt(endpoint)
         except (KeyboardInterrupt, SystemExit):
             raise
