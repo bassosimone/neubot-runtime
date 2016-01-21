@@ -173,28 +173,28 @@ def isconnected(endpoint, sock):
 
     logging.debug('are we connected to %s?', format_epnt(endpoint))
 
-    exception, peername = None, None
+    exception = None
     try:
-        peername = getpeername(sock)
+        sock.getpeername()
     except socket.error as err:
         exception = err
 
     if not exception:
         logging.debug('yes, we are connected')
-        return peername
+        return True
 
     # MacOSX getpeername() fails with EINVAL
     if exception.args[0] not in (errno.ENOTCONN, errno.EINVAL):
         logging.error('connect failed (reason: %s)',
                       str(exception.args[0]))
-        return None
+        return False
 
     try:
         sock.recv(1024)
     except socket.error as err:
         logging.error('connect failed (reason: %s)',
                       str(err.args[1]))
-        return None
+        return False
 
     raise RuntimeError('isconnected(): internal error')
 
