@@ -25,7 +25,7 @@ class Stream(Pollable):
         Pollable.__init__(self)
         self.poller = poller
         self.parent = parent
-        self.conf = sock
+        self.conf = conf
 
         self.sock = sock
         self.filenum = sock.fileno()
