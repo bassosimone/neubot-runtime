@@ -84,7 +84,7 @@ class Profiler(object):
             if self.enabled:
                 lineno = frame.f_lineno
                 prefix  = "    " * (self.frameno)
-                buff = "%s- %s [`%s:%d:%s()`](https://github.com/neubot/neubot-runtime/blob/master/%s#L%d)\n" % (prefix,event,fname,lineno,func,fname,lineno)
+                buff = "%s- %s [`%s:%d:%s()`](https://github.com/neubot/neubot-runtime/blob/exp/trace/%s#L%d)\n" % (prefix,event,fname,lineno,func,fname,lineno)
                 sys.stderr.write(buff)
 
             if event == "call":
